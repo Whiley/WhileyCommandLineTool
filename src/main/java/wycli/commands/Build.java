@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 
 import wybs.lang.SyntacticHeap;
 import wybs.lang.SyntacticItem;
+import wybs.lang.SourceFile;
 import wybs.util.AbstractCompilationUnit;
 import wybs.util.AbstractCompilationUnit.Attribute;
 import wybs.util.AbstractCompilationUnit.Attribute.Span;
@@ -161,6 +162,16 @@ public class Build implements Command {
 		}
 	}
 
+	public static void printSyntacticMarkers(PrintStream output, SyntacticHeap target, SourceFile... sources) throws IOException {
+		// Extract all syntactic markers from entries in the build graph
+		List<SyntacticItem.Marker> items = extractSyntacticMarkers(target);
+		// For each marker, print out error messages appropriately
+		for (int i = 0; i != items.size(); ++i) {
+			// Log the error message
+			printSyntacticMarkers(output, items.get(i), sources);
+		}
+	}
+
 	/**
 	 * Print out an individual syntactic markers.
 	 *
@@ -184,14 +195,25 @@ public class Build implements Command {
 		}
 	}
 
-	/**
-	 * Traverse the various binaries which have been generated looking for error
-	 * messages.
-	 *
-	 * @param binaries
-	 * @return
-	 * @throws IOException
-	 */
+	public static void printSyntacticMarkers(PrintStream output, SyntacticItem.Marker marker, SourceFile... sources) {
+		// Identify enclosing source file
+		SourceFile source = getSourceEntry(marker.getSource(), sources);
+		String filename = source.getID() + "." + source.getContentType().getSuffix();
+		//
+		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
+		// Read the enclosing line so we can print it
+		SourceFile.Line line = source.getEnclosingLine(span.getStart().get().intValue());
+		// Sanity check we found it
+		if (line != null) {
+			// print the error message
+			output.println(filename + ":" + line.getNumber() + ": " + marker.getMessage());
+			// Finally print the line highlight
+			printLineHighlight(output, span, line);
+		} else {
+			output.println(filename + ":?: " + marker.getMessage());
+		}
+	}
+
 	public static List<SyntacticItem.Marker> extractSyntacticMarkers(Path.Entry<?>... binaries) throws IOException {
 		List<SyntacticItem.Marker> annotated = new ArrayList<>();
 		//
@@ -200,11 +222,25 @@ public class Build implements Command {
 			// If the object in question can be decoded as a syntactic heap then we can look
 			// for syntactic messages.
 			if (o instanceof SyntacticHeap) {
-				SyntacticHeap h = (SyntacticHeap) o;
-				// FIXME: this just reports all syntactic markers.
-				annotated.addAll(h.findAll(SyntacticItem.Marker.class));
+				extractSyntacticMarkers((SyntacticHeap) o);
 			}
 		}
+		//
+		return annotated;
+	}
+
+	/**
+	 * Traverse the various binaries which have been generated looking for error
+	 * messages.
+	 *
+	 * @param binaries
+	 * @return
+	 * @throws IOException
+	 */
+	public static List<SyntacticItem.Marker> extractSyntacticMarkers(SyntacticHeap h) throws IOException {
+		List<SyntacticItem.Marker> annotated = new ArrayList<>();
+		// FIXME: this just reports all syntactic markers
+		annotated.addAll(h.findAll(SyntacticItem.Marker.class));
 		//
 		return annotated;
 	}
@@ -216,6 +252,16 @@ public class Build implements Command {
 			// FIXME: this is obviously a bad hack for now
 			String sid = s.id().toString();
 			if (sid.endsWith(str)) {
+				return s;
+			}
+		}
+		return null;
+	}
+
+	private static SourceFile getSourceEntry(Path.ID id, SourceFile... sources) {
+		//
+		for (SourceFile s : sources) {
+			if (id.equals(s.getID())) {
 				return s;
 			}
 		}
@@ -247,6 +293,34 @@ public class Build implements Command {
 			}
 		}
 		for (int i = enclosing.columnStart(); i <= enclosing.columnEnd(); ++i) {
+			str += "^";
+		}
+		output.println(str);
+	}
+
+	private static void printLineHighlight(PrintStream output,
+										   Span span,
+										   SourceFile.Line enclosing) {
+		// Extract line text
+		String text = enclosing.getText();
+		// Determine start and end of span
+		int start = span.getStart().get().intValue() - enclosing.getOffset();
+		int end = Math.min(text.length() - 1, span.getEnd().get().intValue() - enclosing.getOffset());
+		// NOTE: in the following lines I don't print characters
+		// individually. The reason for this is that it messes up the
+		// ANT task output.
+		output.println(text);
+		// First, mirror indendation
+		String str = "";
+		for (int i = 0; i < start; ++i) {
+			if (text.charAt(i) == '\t') {
+				str += "\t";
+			} else {
+				str += " ";
+			}
+		}
+		// Second, place highlights
+		for (int i = start; i <= end; ++i) {
 			str += "^";
 		}
 		output.println(str);
