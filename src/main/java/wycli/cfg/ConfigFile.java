@@ -51,6 +51,11 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> {
 		}
 
 		@Override
+		public ConfigFile read(ID id, InputStream input) throws IOException {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public void write(OutputStream output, ConfigFile value) {
 			// for now
 			throw new UnsupportedOperationException();

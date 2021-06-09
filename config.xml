@@ -3,10 +3,10 @@
   <!-- Load Maven Ant task -->
   <typedef uri="urn:maven-ant"
 	   classpath="lib/maven-ant-tasks-2.1.3.jar"
-	   resource="org/apache/maven/artifact/ant/antlib.xml"/>  
+	   resource="org/apache/maven/artifact/ant/antlib.xml"/>
   <!-- set pom file and dependencies -->
   <artifact:pom id="mypom" file="pom.xml"/>
-  <artifact:dependencies pathId="MAVEN_DEPS" pomRefId="mypom" />  
+  <artifact:dependencies pathId="MAVEN_DEPS" pomRefId="mypom" />
   <!-- set project layout -->
   <property name="SRC_DIR" location="src"/>
   <property name="JAVA_DIR" location="${SRC_DIR}/main/java"/>
@@ -28,6 +28,6 @@
   <property name="STAGING_URL" value="https://oss.sonatype.org/service/local/staging/deploy/maven2" />
   <property name="SERVER_ID" value="ossrh" />
   <!-- Misc properties -->
-  <property name="JAVA_VERSION" value="1.8"/>
+  <property name="JAVA_VERSION" value="1.9"/>
   <property name="WHILEYHOME" value="${env.WHILEYHOME}"/>
 </project>
