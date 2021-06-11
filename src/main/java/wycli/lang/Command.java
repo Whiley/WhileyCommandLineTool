@@ -33,7 +33,7 @@ import wyfs.lang.Path;
  * @author David J. Pearce
  *
  */
-public interface Command {
+public interface Command<S extends Build.State<S>> {
 
 	/**
 	 * Get a descriptor for this command.
@@ -59,7 +59,7 @@ public interface Command {
 	 * any calls are made to <code>finalise()</code>. Observer, however, that this
 	 * command may be executed multiple times.
 	 */
-	public boolean execute(Project target, Template template) throws Exception;
+	public boolean execute(Environment environment, Build.Repository<S> repository, Template template) throws Exception;
 
 	/**
 	 * Defines an environment in which commands can be executed.
@@ -82,15 +82,6 @@ public interface Command {
 		 */
 		Package.Resolver getPackageResolver();
 
-
-		/**
-		 * Get the top-level root for this environment which includes all active
-		 * projects in this environment.
-		 *
-		 * @return
-		 */
-		public Path.Root getRoot();
-
 		/**
 		 * Get the registry used for resolving content types in this environment.
 		 *
@@ -104,20 +95,6 @@ public interface Command {
 		 * @return
 		 */
 		public List<Platform> getBuildPlatforms();
-
-		/**
-		 * Get the list of all projects active within this environment.
-		 *
-		 * @return
-		 */
-		public List<Build.Project> getProjects();
-
-		/**
-		 * Get the executor service available in this environment
-		 *
-		 * @return
-		 */
-		public ExecutorService getExecutor();
 
 		/**
 		 * Get the top-level meter for this environment.
@@ -164,36 +141,7 @@ public interface Command {
 		 *            Enclosing project for this build task
 		 * @return
 		 */
-		public void initialise(Configuration configuration, Command.Project project) throws IOException;
-
-		/**
-		 * Get the source type for this build platform.
-		 *
-		 * @return
-		 */
-		public Content.Type<?> getSourceType();
-
-		/**
-		 * Get the target type for this build platform.
-		 *
-		 * @return
-		 */
-		public Content.Type<?> getTargetType();
-
-		/**
-		 * Execute a given function in the generated code for this platform.
-		 *
-		 * @param project
-		 * @param path
-		 * @param name
-		 * @param args
-		 */
-		public void execute(Build.Project project, Path.ID path, String name, Value... args) throws IOException;
-	}
-
-
-	public interface Project extends Build.Project, Configuration {
-		Environment getEnvironment();
+		public Build.Task<?> initialise(Configuration configuration, Environment environment) throws IOException;
 	}
 
 	/**

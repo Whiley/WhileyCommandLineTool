@@ -22,7 +22,6 @@ import java.util.concurrent.ForkJoinPool;
 
 import wybs.lang.Build.Project;
 import wybs.util.Logger;
-import wybs.util.SequentialBuildProject;
 import wybs.util.AbstractCompilationUnit.Value;
 import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
