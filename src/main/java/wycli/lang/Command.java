@@ -117,7 +117,7 @@ public interface Command<S extends Build.State<S>> {
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface Platform {
+	public interface Platform<S extends Build.State<S>> {
 		/**
 		 * Get the unique name identifying this platform.
 		 *
@@ -141,7 +141,7 @@ public interface Command<S extends Build.State<S>> {
 		 *            Enclosing project for this build task
 		 * @return
 		 */
-		public Build.Task<?> initialise(Configuration configuration, Environment environment) throws IOException;
+		public Build.Task<S> initialise(Configuration configuration, Environment environment) throws IOException;
 	}
 
 	/**
