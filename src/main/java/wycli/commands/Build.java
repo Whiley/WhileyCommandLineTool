@@ -222,7 +222,7 @@ public class Build implements Command {
 			// If the object in question can be decoded as a syntactic heap then we can look
 			// for syntactic messages.
 			if (o instanceof SyntacticHeap) {
-				extractSyntacticMarkers((SyntacticHeap) o);
+				annotated.addAll(extractSyntacticMarkers((SyntacticHeap) o));
 			}
 		}
 		//
