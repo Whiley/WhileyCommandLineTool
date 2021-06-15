@@ -31,7 +31,6 @@ import wycli.commands.Config;
 import wycli.commands.Help;
 import wycli.commands.Inspect;
 import wycli.commands.Install;
-import wycli.commands.Run;
 import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Command.Option;
@@ -52,7 +51,7 @@ public abstract class AbstractWorkspace extends AbstractPluginEnvironment {
 	 */
 	public static final Command.Descriptor[] DESCRIPTORS = {
 			Build.DESCRIPTOR, Clean.DESCRIPTOR, Config.DESCRIPTOR, Help.DESCRIPTOR, Install.DESCRIPTOR,
-			Inspect.DESCRIPTOR, Run.DESCRIPTOR
+			Inspect.DESCRIPTOR
 	};
 
 	/**

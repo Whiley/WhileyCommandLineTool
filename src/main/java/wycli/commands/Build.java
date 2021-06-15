@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 import wybs.lang.SyntacticHeap;
 import wybs.lang.SyntacticItem;
@@ -35,6 +35,7 @@ import wycli.cfg.Configuration;
 import wycli.cfg.Configuration.Schema;
 import wycli.lang.Command;
 import wyfs.lang.Path;
+import wyfs.util.Pair;
 
 public class Build implements Command {
 	/**
@@ -119,30 +120,46 @@ public class Build implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Project project, Template template) throws Exception {
-		boolean r = true;
-		if(project == null) {
-			// Build all projects
-			for(wybs.lang.Build.Project p : environment.getProjects()) {
-				r &= execute(p);
-			}
-		} else {
-			// Build target project (and dependencies)
-			r = execute(project);
+	public boolean execute(Command.Environment environment, wybs.lang.Build.Repository repository, Template template) throws Exception {
+		List<wybs.lang.Build.Task> tasks = new ArrayList<>();
+		// Construct tasks
+		for(Command.Platform p : environment.getBuildPlatforms()) {
+			tasks.add(p.initialise(environment));
 		}
-		//
-		return r;
+		// Construct pipeline
+		Pipeline pipeline = new Pipeline(tasks);
+		// Runs tasks
+		repository.apply(pipeline);
+		// Look for error messages
+//		for (wybs.lang.Build.Task task : project.getTasks()) {
+//			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
+//		}
+		// Success if all pipeline stages completed
+		return (pipeline.completed == tasks.size());
 	}
 
-	private boolean execute(wybs.lang.Build.Project project) throws Exception {
-		// Build the project
-		boolean r = project.build(environment.getExecutor(), environment.getMeter()).get();
-		// Look for error messages
-		for (wybs.lang.Build.Task task : project.getTasks()) {
-			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
+	private static class Pipeline<S extends wybs.lang.Build.State<S>> implements Function<S,S> {
+		private final List<wybs.lang.Build.Task<S>> tasks;
+		private int completed;
+
+		private Pipeline(List<wybs.lang.Build.Task<S>> tasks) {
+			this.tasks = tasks;
 		}
-		//
-		return r;
+
+		@Override
+		public S apply(S s) {
+			for (int i = 0; i != tasks.size(); ++i) {
+				wybs.lang.Build.Task<S> ith = tasks.get(i);
+				Pair<S, Boolean> p = ith.apply(s);
+				s = p.first();
+				if (!p.second()) {
+					// Print error messages
+					break;
+				}
+				completed = completed + 1;
+			}
+			return s;
+		}
 	}
 
 	/**

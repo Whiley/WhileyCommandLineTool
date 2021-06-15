@@ -141,7 +141,7 @@ public interface Command<S extends Build.State<S>> {
 		 *            Enclosing project for this build task
 		 * @return
 		 */
-		public Build.Task<S> initialise(Configuration configuration, Environment environment) throws IOException;
+		public Build.Task<S> initialise(Environment environment) throws IOException;
 	}
 
 	/**
