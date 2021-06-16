@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 
 import wybs.util.Logger;
+import wybs.lang.Build.Repository;
 import wybs.util.AbstractCompilationUnit.Value;
 import wycli.cfg.Configuration;
 import wycli.cfg.Configuration.Schema;
@@ -119,20 +120,20 @@ public class Install implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Project project, Template template) {
+	public boolean execute(Template template) {
 		boolean deploy = template.getOptions().has("deploy");
 		try {
-			List<Value.UTF8> includes = determineIncludes(project);
+			List<Value.UTF8> includes = determineIncludes();
 			// Determine list of files to go in package
-			List<Path.Entry<?>> files = determinePackageContents(project,includes);
+			List<Path.Entry<?>> files = determinePackageContents(includes);
 			// Construct zip file context representing package
 			ZipFile zf = createZipFile(files);
 			// Get top-level repository
 			Package.Repository repo = environment.getPackageResolver().getRepository();
 			// Extract package name from configuration
-			String name = project.get(Value.UTF8.class, Trie.fromString("package/name")).toString();
+			String name = environment.get(Value.UTF8.class, Trie.fromString("package/name")).toString();
 			// Extract package version from
-			String version = project.get(Value.UTF8.class, Trie.fromString("package/version")).toString();
+			String version = environment.get(Value.UTF8.class, Trie.fromString("package/version")).toString();
 			//
 			install(deploy ? 1 : 0, repo, zf, name, new SemanticVersion(version));
 			// Done
@@ -151,14 +152,14 @@ public class Install implements Command {
 	 * @param project
 	 * @return
 	 */
-	private List<Value.UTF8> determineIncludes(Command.Project project) {
+	private List<Value.UTF8> determineIncludes() {
 		ArrayList<Value.UTF8> includes = new ArrayList<>();
 		// Determine default included files
-		Value.UTF8[] items = project.get(Value.Array.class, BUILD_INCLUDES).toArray(Value.UTF8.class);
+		Value.UTF8[] items = environment.get(Value.Array.class, BUILD_INCLUDES).toArray(Value.UTF8.class);
 		includes.addAll(Arrays.asList(items));
 		// Determine platform-specific included files
-		for (Path.ID id : project.matchAll(BUILD_PLATFORM_INCLUDES)) {
-			items = project.get(Value.Array.class, id).toArray(Value.UTF8.class);
+		for (Path.ID id : environment.matchAll(BUILD_PLATFORM_INCLUDES)) {
+			items = environment.get(Value.Array.class, id).toArray(Value.UTF8.class);
 			includes.addAll(Arrays.asList(items));
 		}
 		// Done
@@ -172,18 +173,17 @@ public class Install implements Command {
 	 * @return
 	 * @throws IOException
 	 */
-	private List<Path.Entry<?>> determinePackageContents(Build.Project project, List<Value.UTF8> includes)
+	private List<Path.Entry<?>> determinePackageContents(List<Value.UTF8> includes)
 			throws IOException {
+		Repository repository = environment.getRepository();
 		// Determine includes filter
 		ArrayList<Path.Entry<?>> files = new ArrayList<>();
-		// Extract root of this project
-		Path.Root root = project.getRoot();
 		// Add all files from the includes filter
 		for(int i=0;i!=includes.size();++i) {
 			// Construct a filter from the attribute itself
 			Content.Filter<?> filter = createFilter(includes.get(i).toString());
 			// Add all files matching the attribute
-			files.addAll(root.get(filter));
+			files.addAll(repository.get().get(filter));
 		}
 		// Done
 		return files;

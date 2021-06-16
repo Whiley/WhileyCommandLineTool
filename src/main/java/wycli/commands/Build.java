@@ -28,6 +28,7 @@ import java.util.function.Function;
 import wybs.lang.SyntacticHeap;
 import wybs.lang.SyntacticItem;
 import wybs.lang.SourceFile;
+import wybs.lang.Build.Repository;
 import wybs.util.AbstractCompilationUnit;
 import wybs.util.AbstractCompilationUnit.Attribute;
 import wybs.util.AbstractCompilationUnit.Attribute.Span;
@@ -120,7 +121,8 @@ public class Build implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Environment environment, wybs.lang.Build.Repository repository, Template template) throws Exception {
+	public boolean execute(Template template) throws Exception {
+		Repository repository = environment.getRepository();
 		List<wybs.lang.Build.Task> tasks = new ArrayList<>();
 		// Construct tasks
 		for(Command.Platform p : environment.getBuildPlatforms()) {

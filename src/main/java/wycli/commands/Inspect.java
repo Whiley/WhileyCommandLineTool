@@ -107,22 +107,22 @@ public class Inspect implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Project project, Template template) throws Exception {
+	public boolean execute(wybs.lang.Build.Repository repository, Template template) throws Exception {
 		boolean garbage = template.getOptions().get("full", Boolean.class);
 		boolean raw = template.getOptions().get("raw", Boolean.class);
 		//
-		int width = project.get(Value.Int.class, INSPECT_WIDTH).unwrap().intValue();
-		int indent = project.get(Value.Int.class, INSPECT_INDENT).unwrap().intValue();
+		int width = environment.get(Value.Int.class, INSPECT_WIDTH).unwrap().intValue();
+		int indent = environment.get(Value.Int.class, INSPECT_INDENT).unwrap().intValue();
 
 		List<String> files = template.getArguments();
 		for (String file : files) {
 			Content.Type<?> ct = getContentType(file);
-			Path.Entry<?> entry = getEntry(file, ct);
+			wybs.lang.Build.Entry entry = getEntry(repository, file, ct);
 			if(entry == null) {
 				out.println("unknown file: " + file);
 			} else if(!raw && ct instanceof Content.Printable<?>){
 				Content.Printable cp = (Content.Printable<?>) ct;
-				cp.print(out, entry.read());
+				cp.print(out, entry);
 			} else {
 				inspect(entry, ct, garbage, width);
 			}
@@ -152,13 +152,13 @@ public class Inspect implements Command {
 	 * @return
 	 * @throws IOException
 	 */
-	public Path.Entry<?> getEntry(String file, Content.Type<?> ct) throws IOException {
+	public wybs.lang.Build.Entry getEntry(wybs.lang.Build.Repository<?> repository, String file, Content.Type ct) throws IOException {
 		// Strip suffix
 		file = file.replace("." + ct.getSuffix(), "");
 		// Determine path id
 		Path.ID id = Trie.fromString(file);
 		// Get the file from the repository root
-		return environment.getRoot().get(id, ct);
+		return repository.get().get(ct, id);
 	}
 
 	/**
@@ -168,12 +168,12 @@ public class Inspect implements Command {
 	 * @param ct
 	 * @throws IOException
 	 */
-	private void inspect(Path.Entry<?> entry, Content.Type<?> ct, boolean garbage, int width) throws IOException {
-		Object o = entry.read();
-		if (o instanceof SyntacticHeap) {
-			new SyntacticHeapPrinter(new PrintWriter(out), garbage).print((SyntacticHeap) o);
+	private void inspect(wybs.lang.Build.Entry entry, Content.Type<?> ct, boolean garbage, int width) throws IOException {
+		if (entry instanceof SyntacticHeap) {
+			new SyntacticHeapPrinter(new PrintWriter(out), garbage).print((SyntacticHeap) entry);
 		} else {
-			inspectBinaryFile(readAllBytes(entry.inputStream()),width);
+			throw new IllegalArgumentException("internal failure");
+			//inspectBinaryFile(readAllBytes(entry.inputStream()),width);
 		}
 	}
 

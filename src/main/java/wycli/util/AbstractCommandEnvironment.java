@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import wybs.lang.Build.Project;
 import wybs.util.Logger;
 import wycli.cfg.Configuration;
 import wycli.cfg.Configuration.Schema;
@@ -126,11 +125,6 @@ public abstract class AbstractCommandEnvironment implements Command.Environment 
 	@Override
 	public List<Command.Platform> getBuildPlatforms() {
 		return buildPlatforms;
-	}
-
-	@Override
-	public ExecutorService getExecutor() {
-		return executor;
 	}
 
 	@Override

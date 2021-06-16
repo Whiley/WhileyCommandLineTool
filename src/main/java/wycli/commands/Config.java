@@ -98,7 +98,7 @@ public class Config implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Project project, Template template) throws Exception {
+	public boolean execute(Template template) throws Exception {
 		if(template.getChild() != null) {
 			// Execute a subcommand
 			template = template.getChild();
@@ -107,7 +107,7 @@ public class Config implements Command {
 			// Construct an instance of the command
 			Command command = descriptor.initialise(environment);
 			//
-			return command.execute(project, template);
+			return command.execute(template);
 		} else {
 			Help.print(System.out,DESCRIPTOR);
 			return false;
@@ -158,11 +158,11 @@ public class Config implements Command {
 	//
 	public static class ListCmd implements Command {
 		private final PrintStream out;
-		private final Configuration configuration;
+		private final Environment environment;
 
-		public ListCmd(PrintStream out, Configuration configuration) {
+		public ListCmd(PrintStream out, Environment environment) {
 			this.out = out;
-			this.configuration = configuration;
+			this.environment = environment;
 		}
 
 		@Override
@@ -179,18 +179,16 @@ public class Config implements Command {
 		}
 
 		@Override
-		public boolean execute(Command.Project project, Template template) {
-			for (Path.ID key : configuration.matchAll(Trie.fromString("**"))) {
+		public boolean execute(Template template) {
+			for (Path.ID key : environment.matchAll(Trie.fromString("**"))) {
 				out.print(key);
 				out.print("=");
-				out.println(configuration.get(Object.class, key));
+				out.println(environment.get(Object.class, key));
 			}
-			if (project != null) {
-				for (Path.ID key : project.matchAll(Trie.fromString("**"))) {
-					out.print(key);
-					out.print("=");
-					out.println(configuration.get(Object.class, key));
-				}
+			for (Path.ID key : environment.matchAll(Trie.fromString("**"))) {
+				out.print(key);
+				out.print("=");
+				out.println(environment.get(Object.class, key));
 			}
 			return false;
 		}

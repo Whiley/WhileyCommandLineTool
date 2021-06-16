@@ -92,7 +92,7 @@ public class Clean implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Project project, Template template) {
+	public boolean execute(Template template) {
 		try {
 			// Extract options
 			boolean verbose = template.getOptions().get("verbose", Boolean.class);

@@ -90,7 +90,7 @@ public class Help implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Project project, Template template) {
+	public boolean execute(Template template) {
 		// Extract arguments
 		List<String> args = template.getArguments();
 		//

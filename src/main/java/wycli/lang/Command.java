@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 
 import wybs.lang.Build;
+import wybs.lang.Build.Repository;
 import wybs.lang.Build.Meter;
 import wybs.util.Logger;
 import wybs.util.AbstractCompilationUnit.Value;
@@ -59,7 +60,7 @@ public interface Command<S extends Build.State<S>> {
 	 * any calls are made to <code>finalise()</code>. Observer, however, that this
 	 * command may be executed multiple times.
 	 */
-	public boolean execute(Environment environment, Build.Repository<S> repository, Template template) throws Exception;
+	public boolean execute(Template template) throws Exception;
 
 	/**
 	 * Defines an environment in which commands can be executed.
@@ -95,6 +96,13 @@ public interface Command<S extends Build.State<S>> {
 		 * @return
 		 */
 		public List<Platform> getBuildPlatforms();
+
+		/**
+		 * Get the build repository associated with this environment.
+		 *
+		 * @return
+		 */
+		public Repository<?> getRepository();
 
 		/**
 		 * Get the top-level meter for this environment.
