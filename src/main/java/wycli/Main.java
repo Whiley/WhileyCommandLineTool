@@ -149,24 +149,34 @@ public class Main {
 	// Helpers
 	// ==================================================================
 
-	private static Command.Environment constructEnvironment(Logger logger) throws IOException {
+	private static Pair<Command.Environment,Path.ID> constructEnvironment(Logger logger) throws IOException {
 		// Determine system-wide directory
 		FileRepository systemRoot = determineSystemRoot();
 		// Determine user-wide directory
 		FileRepository globalRoot = determineGlobalRoot();
 		// Read the system configuration file
-		Configuration system = readConfigFile(systemRoot,Trie.fromString("wy"), Schemas.SYSTEM_CONFIG_SCHEMA);
+		Configuration system = readConfigFile(systemRoot,Trie.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
 		// Read the global configuration file
-		Configuration global = readConfigFile(globalRoot,Trie.fromString("wy"), Schemas.GLOBAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
+		Configuration global = readConfigFile(globalRoot,Trie.fromString("wy"), logger, Schemas.GLOBAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
 		// Construct plugin environment and activate plugins
 		Plugin.Environment env = activatePlugins(system,logger);
-		// Determine local diretory
+		// Determine build root and relative path
 		Pair<FileRepository, Path.ID> lrp = determineLocalRoot(env);
 		// Determine workspace directory
 		FileRepository localRoot = lrp.first();
 		Path.ID pid = lrp.second();
 		// Extract the local configuration(s)
-		Configuration local = readConfigFile("wy", localRoot, Schemas.LOCAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
+		Command.Environment cenv = constructEnvironment(env, localRoot, logger, Trie.ROOT);
+		//
+		return new Pair<>(cenv,pid);
+	}
+
+	private static Command.Environment constructEnvironment(Plugin.Environment env, FileRepository root, Logger logger, Path.ID path) throws IOException {
+		Configuration local = readConfigFile(root, path, logger, Schemas.LOCAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
+		// Decide whether or not there are any children.
+
+		// Done
+		return new EnvironmentLeaf(env,local);
 	}
 
 	/**
@@ -294,22 +304,20 @@ public class Main {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(FileRepository root, Path.ID id, Configuration.Schema... schemas) throws IOException {
-		ConfigFile cf = root.get().get(ConfigFile.ContentType,id);
+	public static Configuration readConfigFile(FileRepository root, Path.ID id, Logger logger, Configuration.Schema... schemas) throws IOException {
+		// Combine schemas together
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
-		ConfigFileLexer lexer = new ConfigFileLexer(fin);
-		ConfigFileParser parser = new ConfigFileParser(lexer.scan());
 		try {
 			// Read the configuration file
-			ConfigFile cf = parser.read();
+			ConfigFile cf = root.get().get(ConfigFile.ContentType,id);
+			// Log the event
+			logger.logTimedMessage("Read configuration file " + id, 0, 0);
 			// Construct configuration according to given schema
 			return cf.toConfiguration(schema, false);
 		} catch (SyntacticException e) {
 			e.outputSourceError(System.out, false);
 			System.exit(-1);
 			return null;
-		} finally {
-			fin.close();
 		}
 	}
 
@@ -331,6 +339,63 @@ public class Main {
 		}
 	}
 
+	private static abstract class Environment implements Command.Environment {
+		private final Package.Resolver resolver;
+		private final Plugin.Environment env;
+
+		public Environment(Plugin.Environment env) {
+			this.env = env;
+		}
+
+		@Override
+		public List<Command.Descriptor> getCommandDescriptors() {
+		   return env.getCommandDescriptors();
+		}
+
+		@Override
+		public Package.Resolver getPackageResolver() {
+			return resolver;
+		}
+
+		@Override
+		public Content.Registry getContentRegistry() {
+			return env;
+		}
+
+		@Override
+		public List<Command.Platform> getBuildPlatforms() {
+			return env.getBuildPlatforms();
+		}
+
+		@Override
+		public Build.Repository<?> getRepository() {
+			return null;
+		}
+
+		@Override
+		public Command.Environment get(Path.ID path) {
+			return null;
+		}
+
+		@Override
+		public Build.Meter getMeter() {
+			return null;
+		}
+
+		@Override
+		public Logger getLogger() {
+			return null;
+		}
+
+		@Override
+		public Schema getConfigurationSchema() {
+			return null;
+		}
+	}
+
+	private static class EnvironmentLeaf extends Environment {
+
+	}
 
 	public static class Meter implements Build.Meter {
 		private final String name;

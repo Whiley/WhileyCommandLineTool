@@ -104,6 +104,8 @@ public interface Command<S extends Build.State<S>> {
 		 */
 		public Repository<?> getRepository();
 
+		public Environment get(Path.ID path);
+
 		/**
 		 * Get the top-level meter for this environment.
 		 *
@@ -116,7 +118,6 @@ public interface Command<S extends Build.State<S>> {
 		 */
 		public Logger getLogger();
 	}
-
 
 	/**
 	 * Provides a high-level concept of a target platform. These are registered by

@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import wybs.lang.Build;
 import wybs.lang.SyntacticItem;
 import wybs.lang.SyntacticException;
 import wybs.util.AbstractCompilationUnit;
@@ -30,7 +31,7 @@ import wyfs.lang.Path;
 import wyfs.lang.Path.ID;
 import wyfs.util.Trie;
 
-public class ConfigFile extends AbstractCompilationUnit<ConfigFile> {
+public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements Build.Entry {
 	// =========================================================================
 	// Content Type
 	// =========================================================================
@@ -83,7 +84,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> {
 	// =========================================================================
 	// Constructors
 	// =========================================================================
-
+	private final Path.ID id;
 	/**
 	 * The list of declarations which make up this configuration.
 	 */
@@ -93,6 +94,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> {
 		super(entry);
 		//
 		this.declarations = new Tuple<>();
+		this.id = entry.id();
 	}
 
 	public ConfigFile(Path.Entry<ConfigFile> entry, Tuple<Declaration> declarations) {
@@ -101,6 +103,17 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> {
 		this.declarations = declarations;
 		//
 		allocate(declarations);
+		this.id = entry.id();
+	}
+
+	@Override
+	public Path.ID getID() {
+		return id;
+	}
+
+	@Override
+	public Content.Type<ConfigFile> getContentType() {
+		return ContentType;
 	}
 
 	public static interface Declaration extends SyntacticItem {
