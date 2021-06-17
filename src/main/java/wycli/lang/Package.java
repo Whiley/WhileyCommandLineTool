@@ -31,39 +31,6 @@ import wyfs.util.ZipFile;
 public interface Package {
 
 	/**
-	 * This determines what files are included in a package be default (i.e. when
-	 * the build/includes attribute is not specified).
-	 */
-	public static final Value.Array DEFAULT_BUILD_INCLUDES = new Value.Array(
-			// Include package description by default
-			new Value.UTF8("wy.toml"),
-			// Include all wyil files by default
-			new Value.UTF8("**/*.wyil"),
-			// Include all whiley files by default
-			new Value.UTF8("**/*.whiley")
-		);
-
-	/**
-	 * Schema for packages (i.e. which applies to a single project for a given user).
-	 */
-	public static Configuration.Schema SCHEMA = Configuration.fromArray(
-			// Required items
-			Configuration.UNBOUND_STRING(Trie.fromString("package/name"), "Name of this package", new Value.UTF8("main")),
-			Configuration.UNBOUND_STRING_ARRAY(Trie.fromString("package/authors"), "Author(s) of this package", false),
-			Configuration.UNBOUND_STRING(Trie.fromString("package/version"), "Semantic version of this package", false),
-			// Build items
-			Configuration.UNBOUND_STRING_ARRAY(Trie.fromString("build/platforms"),
-					"Target platforms for this package (default just \"whiley\")",
-					new Value.Array(new Value.UTF8("whiley"))),
-			Configuration.UNBOUND_STRING_ARRAY(Trie.fromString("build/includes"), "Files to include in package",
-					DEFAULT_BUILD_INCLUDES),
-			Configuration.UNBOUND_STRING(Trie.fromString("build/main"), "Identify main method", false),
-			// Optional items
-			Configuration.REGEX_STRING(Trie.fromString("dependencies/*"), "Packages this package depends on", false,
-					Pattern.compile("\\d+.\\d+.\\d+"))
-	);
-
-	/**
 	 * Responsible for resolving version strings into concrete packages.
 	 *
 	 * @author David J. Pearce

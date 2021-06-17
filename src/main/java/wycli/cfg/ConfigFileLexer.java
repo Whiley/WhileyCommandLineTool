@@ -13,10 +13,7 @@
 // limitations under the License.
 package wycli.cfg;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,13 +28,11 @@ import wyfs.lang.Path;
  *
  */
 public class ConfigFileLexer {
-	private final Path.Entry<ConfigFile> entry;
 	private StringBuilder input;
 	private int pos;
 
-	public ConfigFileLexer(Path.Entry<ConfigFile> entry) throws IOException {
-		this.entry = entry;
-		Reader reader = new InputStreamReader(entry.inputStream());
+	public ConfigFileLexer(InputStream input) throws IOException {
+		Reader reader = new InputStreamReader(input);
 		BufferedReader in = new BufferedReader(reader);
 
         StringBuilder text = new StringBuilder();
@@ -46,7 +41,7 @@ public class ConfigFileLexer {
 		while ((len = in.read(buf)) != -1) {
 			text.append(buf, 0, len);
 		}
-        input = text;
+        this.input = text;
 	}
 
 	/**
@@ -256,8 +251,7 @@ public class ConfigFileLexer {
 	 */
 	private void syntaxError(String msg, int index) {
 		// FIXME: this is clearly not a sensible approach
-		throw new SyntacticException(msg, entry, new ConfigFile.Attribute.Span(null,index,index));
-
+		throw new SyntacticException(msg, null, new ConfigFile.Attribute.Span(null, index, index));
 	}
 
 	static final char[] opStarts = { '[', ']', '=', '.', ',' };

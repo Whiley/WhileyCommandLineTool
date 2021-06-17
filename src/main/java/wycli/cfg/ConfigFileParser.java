@@ -37,12 +37,12 @@ import wyfs.lang.Path;
  */
 public class ConfigFileParser {
 	private final ConfigFile file;
-	private ArrayList<Token> tokens;
+	private final ArrayList<Token> tokens;
 	private int index;
 
-	public ConfigFileParser(Path.Entry<ConfigFile> entry, List<Token> tokens) {
+	public ConfigFileParser(List<Token> tokens) {
 		this.tokens = new ArrayList<>(tokens);
-		this.file = new ConfigFile(entry);
+		this.file = new ConfigFile(null);
 	}
 
 	/**

@@ -14,21 +14,21 @@
 package wycli;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
+import wybs.util.AbstractCompilationUnit.Value;
 import wybs.lang.Build;
 import wybs.lang.SyntacticException;
+import wybs.util.AbstractCompilationUnit;
+import wybs.util.FileRepository;
 import wybs.util.Logger;
-import wycli.cfg.ConfigFile;
-import wycli.cfg.Configuration;
-import wycli.cfg.ConfigurationCombinator;
+import wycli.cfg.*;
 import wycli.lang.Command;
 import wycli.lang.Package;
+import wycli.lang.Plugin;
 import wycli.util.CommandParser;
 import wycli.util.LocalPackageRepository;
 import wycli.util.RemotePackageRepository;
@@ -51,31 +51,12 @@ import wyfs.util.ZipFile;
  * @author David J. Pearce
  *
  */
-public class WyMain extends AbstractWorkspace {
+public class Main {
 
 	/**
 	 * Path to the dependency repository within the global root.
 	 */
 	public static final Path.ID DEFAULT_REPOSITORY_PATH = Trie.fromString("repository");
-
-	/**
-	 * Schema for system configuration (i.e. which applies to all users).
-	 */
-	public static Configuration.Schema SYSTEM_CONFIG_SCHEMA = Configuration.fromArray(
-			Configuration.UNBOUND_STRING(Trie.fromString("plugins/*"), "list of globally installed plugins", true));
-
-	/**
-	 * Schema for global configuration (i.e. which applies to all projects for a given user).
-	 */
-	public static Configuration.Schema GLOBAL_CONFIG_SCHEMA = Configuration.fromArray(
-			Configuration.UNBOUND_STRING(Trie.fromString("user/name"), "username", false),
-			Configuration.UNBOUND_STRING(Trie.fromString("user/email"), "email", false));
-
-	/**
-	 * Schema for local configuration (i.e. which applies to a given workspace).
-	 */
-	public static Configuration.Schema LOCAL_CONFIG_SCHEMA = Configuration.fromArray(
-			Configuration.UNBOUND_STRING_ARRAY(Trie.fromString("workspace/projects"), "list of projects", false));
 
 
 	// ========================================================================
@@ -93,7 +74,7 @@ public class WyMain extends AbstractWorkspace {
 	 */
 	protected Package.Resolver resolver;
 
-	public WyMain(Configuration configuration, String dir, Path.Root repository) throws IOException {
+	public Main(Configuration configuration, String dir, Path.Root repository) throws IOException {
 		super(configuration);
 		// Setup workspace root
 		this.localRoot = new DirectoryRoot(dir, registry);
@@ -116,26 +97,11 @@ public class WyMain extends AbstractWorkspace {
 	// ==================================================================
 
 	public static void main(String[] args) throws Exception {
-		// Determine system-wide directory
-		Path.Root systemRoot = determineSystemRoot();
-		// Determine user-wide directory
-		Path.Root globalRoot = determineGlobalRoot();
-		// Determine workspace directory
-		Pair<Path.Root,Path.ID> wrp = determineLocalRootAndProject();
-		Path.Root localRoot = wrp.first();
-		Path.ID pid = wrp.second();
-		// Construct local repository root
-		Path.Root repository = globalRoot.createRelativeRoot(DEFAULT_REPOSITORY_PATH);
-		// Read the system configuration file
-		Configuration system = readConfigFile("wy", systemRoot, SYSTEM_CONFIG_SCHEMA);
-		// Read the global configuration file
-		Configuration global = readConfigFile("wy", globalRoot, GLOBAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
-		// Read the global configuration file
-		Configuration local = readConfigFile("wy", localRoot, LOCAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
+		Command.Environment environment = extractEnvironment();
 		// Construct the merged configuration
 		Configuration config = new ConfigurationCombinator(local, global, system);
 		// Construct the workspace
-		WyMain workspace = new WyMain(config, localRoot.toString(), repository);
+		Main workspace = new Main(config, localRoot.toString(), repository);
 		// Construct environment and execute arguments
 		Command.Descriptor descriptor = ROOT_DESCRIPTOR(workspace);
 		// Parse the given command-line
@@ -183,6 +149,26 @@ public class WyMain extends AbstractWorkspace {
 	// Helpers
 	// ==================================================================
 
+	private static Command.Environment constructEnvironment(Logger logger) throws IOException {
+		// Determine system-wide directory
+		FileRepository systemRoot = determineSystemRoot();
+		// Determine user-wide directory
+		FileRepository globalRoot = determineGlobalRoot();
+		// Read the system configuration file
+		Configuration system = readConfigFile(systemRoot,Trie.fromString("wy"), Schemas.SYSTEM_CONFIG_SCHEMA);
+		// Read the global configuration file
+		Configuration global = readConfigFile(globalRoot,Trie.fromString("wy"), Schemas.GLOBAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
+		// Construct plugin environment and activate plugins
+		Plugin.Environment env = activatePlugins(system,logger);
+		// Determine local diretory
+		Pair<FileRepository, Path.ID> lrp = determineLocalRoot(env);
+		// Determine workspace directory
+		FileRepository localRoot = lrp.first();
+		Path.ID pid = lrp.second();
+		// Extract the local configuration(s)
+		Configuration local = readConfigFile("wy", localRoot, Schemas.LOCAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
+	}
+
 	/**
 	 * Determine the system root. That is, the installation directory for the
 	 * compiler itself.
@@ -191,13 +177,13 @@ public class WyMain extends AbstractWorkspace {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Path.Root determineSystemRoot() throws IOException {
+	private static FileRepository determineSystemRoot() throws IOException {
 		String whileyhome = System.getenv("WHILEYHOME");
 		if (whileyhome == null) {
 			System.err.println("error: WHILEYHOME environment variable not set");
 			System.exit(-1);
 		}
-		return new DirectoryRoot(whileyhome,BOOT_REGISTRY);
+		return new FileRepository(BOOT_REGISTRY, new File(whileyhome));
 	}
 
 	/**
@@ -208,10 +194,10 @@ public class WyMain extends AbstractWorkspace {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Path.Root determineGlobalRoot() throws IOException {
+	private static FileRepository determineGlobalRoot() throws IOException {
 		String userhome = System.getProperty("user.home");
 		String whileydir = userhome + File.separator + ".whiley";
-		return new DirectoryRoot(whileydir, BOOT_REGISTRY);
+		return new FileRepository(BOOT_REGISTRY, new File(whileydir));
 	}
 
 	/**
@@ -223,23 +209,59 @@ public class WyMain extends AbstractWorkspace {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<Path.Root,Path.ID> determineLocalRootAndProject() throws IOException {
+	private static Pair<FileRepository, Path.ID> determineLocalRoot(Plugin.Environment env) throws IOException {
 		// Search for inner configuration.
 		File inner = findConfigFile(new File("."));
-		if(inner == null) {
+		if (inner == null) {
 			throw new IllegalArgumentException("unable to find build configuration (\"wy.toml\")");
 		}
 		// Search for enclosing configuration (if applicable).
 		File outer = findConfigFile(inner.getParentFile());
-		if(outer == null) {
+		if (outer == null) {
 			// No enclosing configuration found.
-			return new Pair<>(new DirectoryRoot(inner,BOOT_REGISTRY),Trie.ROOT);
+			return new Pair<>(new FileRepository(env, inner), Trie.ROOT);
 		} else {
 			// Calculate relative path
-			String path = inner.getPath().replace(outer.getPath(), "").replace(File.separatorChar,'/');
+			String path = inner.getPath().replace(outer.getPath(), "").replace(File.separatorChar, '/');
 			// Done
-			return new Pair<>(new DirectoryRoot(outer,BOOT_REGISTRY),Trie.fromString(path));
+			return new Pair<>(new FileRepository(env, outer), Trie.fromString(path));
 		}
+	}
+
+	/**
+	 * Activate the set of registed plugins which the tool uses. Currently this list
+	 * is statically determined, but eventually it will be possible to dynamically
+	 * add plugins to the system.
+	 *
+	 * @param verbose
+	 * @param locations
+	 * @return
+	 */
+	private static Plugin.Environment activatePlugins(Configuration global, Logger logger) {
+		Plugin.Environment env = new Plugin.Environment(logger);
+		// Determine the set of install plugins
+		List<Path.ID> plugins = global.matchAll(Trie.fromString("plugins/*"));
+		// start modules
+		for (Path.ID id : plugins) {
+			String activator = id.toString();
+			Value.Bool enabled = global.get(Value.Bool.class, id);
+			// Only activate if enabled
+			if(enabled.get()) {
+				try {
+					Class<?> c = Class.forName(activator.toString());
+					Plugin.Activator instance = (Plugin.Activator) c.newInstance();
+					env.activate(instance);
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				} catch (InstantiationException e) {
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		// Done
+		return env;
 	}
 
 	private static File findConfigFile(File dir) {
@@ -272,21 +294,22 @@ public class WyMain extends AbstractWorkspace {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(String name, Path.Root root, Configuration.Schema... schemas) throws IOException {
+	public static Configuration readConfigFile(FileRepository root, Path.ID id, Configuration.Schema... schemas) throws IOException {
+		ConfigFile cf = root.get().get(ConfigFile.ContentType,id);
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
-		Path.Entry<ConfigFile> config = root.get(Trie.fromString(name), ConfigFile.ContentType);
-		if (config == null) {
-			return Configuration.EMPTY(schema);
-		}
+		ConfigFileLexer lexer = new ConfigFileLexer(fin);
+		ConfigFileParser parser = new ConfigFileParser(lexer.scan());
 		try {
 			// Read the configuration file
-			ConfigFile cf = config.read();
+			ConfigFile cf = parser.read();
 			// Construct configuration according to given schema
 			return cf.toConfiguration(schema, false);
 		} catch (SyntacticException e) {
 			e.outputSourceError(System.out, false);
 			System.exit(-1);
 			return null;
+		} finally {
+			fin.close();
 		}
 	}
 

@@ -15,6 +15,7 @@ package wycli.lang;
 
 import wybs.util.Logger;
 import wyfs.lang.Content;
+import wyfs.lang.Path;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -115,7 +116,7 @@ public interface Plugin {
 	/**
 	 * Provides a default plugin environment which is generally sufficient.
 	 */
-	public static class Environment implements Plugin.Context {
+	public static class Environment implements Plugin.Context, Content.Registry {
 		/**
 		 * Logging stream, which is null by default.
 		 */
@@ -187,6 +188,27 @@ public interface Plugin {
 		@Override
 		public void logTimedMessage(String msg, long time, long memory) {
 			logger.logTimedMessage(msg, time, memory);
+		}
+
+		@Override
+		public void associate(Path.Entry<?> e) {
+			throw new IllegalArgumentException("GOT HERE");
+		}
+
+		@Override
+		public String suffix(Content.Type<?> t) {
+			return t.getSuffix();
+		}
+
+		@Override
+		public Content.Type<?> contentType(String suffix) {
+			for (int i = 0; i != contentTypes.size(); ++i) {
+				Content.Type ith = contentTypes.get(i);
+				if (ith.getSuffix().equals(suffix)) {
+					return ith;
+				}
+			}
+			throw new IllegalArgumentException("unknown file type: " + suffix);
 		}
 	}
 }

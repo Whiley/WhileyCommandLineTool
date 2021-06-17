@@ -45,8 +45,8 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> {
 
 		@Override
 		public ConfigFile read(Path.Entry<ConfigFile> e, InputStream inputstream) throws IOException {
-			ConfigFileLexer lexer = new ConfigFileLexer(e);
-			ConfigFileParser parser = new ConfigFileParser(e, lexer.scan());
+			ConfigFileLexer lexer = new ConfigFileLexer(e.inputStream());
+			ConfigFileParser parser = new ConfigFileParser(lexer.scan());
 			return parser.read();
 		}
 
