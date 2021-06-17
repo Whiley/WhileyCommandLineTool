@@ -121,11 +121,11 @@ public class Build implements Command {
 	}
 
 	@Override
-	public boolean execute(Template template) throws Exception {
+	public boolean execute(Path.ID path, Template template) throws Exception {
 		Repository repository = environment.getRepository();
 		List<wybs.lang.Build.Task> tasks = new ArrayList<>();
 		// Construct tasks
-		for(Command.Platform p : environment.getBuildPlatforms()) {
+		for(Command.Platform p : environment.getCommandPlatforms()) {
 			tasks.add(p.initialise(environment));
 		}
 		// Construct pipeline

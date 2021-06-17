@@ -60,7 +60,7 @@ public interface Command<S extends Build.State<S>> {
 	 * any calls are made to <code>finalise()</code>. Observer, however, that this
 	 * command may be executed multiple times.
 	 */
-	public boolean execute(Template template) throws Exception;
+	public boolean execute(Path.ID path, Template template) throws Exception;
 
 	/**
 	 * Defines an environment in which commands can be executed.
@@ -68,7 +68,7 @@ public interface Command<S extends Build.State<S>> {
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface Environment extends Configuration {
+	public interface Environment {
 		/**
 		 * Get the command descriptors available in this environment.
 		 *
@@ -95,7 +95,7 @@ public interface Command<S extends Build.State<S>> {
 		 *
 		 * @return
 		 */
-		public List<Platform> getBuildPlatforms();
+		public List<Platform> getCommandPlatforms();
 
 		/**
 		 * Get the build repository associated with this environment.
@@ -104,7 +104,15 @@ public interface Command<S extends Build.State<S>> {
 		 */
 		public Repository<?> getRepository();
 
-		public Environment get(Path.ID path);
+		/**
+		 * Get the configuration associated with a given build path.  The key is that the configuration at a given path
+		 * is the combination of all configurations on parent paths leading to that point, plus any specific
+		 * configuration at that point.
+		 *
+		 * @param path
+		 * @return
+		 */
+		public Configuration get(Path.ID path);
 
 		/**
 		 * Get the top-level meter for this environment.

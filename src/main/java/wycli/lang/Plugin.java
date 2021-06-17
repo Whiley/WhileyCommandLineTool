@@ -19,6 +19,7 @@ import wyfs.lang.Path;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * <p>
@@ -150,6 +151,18 @@ public interface Plugin {
 			create(Content.Type.class, p -> contentTypes.add(p));
 			create(Command.Descriptor.class, p -> descriptors.add(p));
 			create(Command.Platform.class, p -> platforms.add(p));
+		}
+
+		public List<Content.Type<?>> getContentTypes() {
+			return contentTypes;
+		}
+
+		public List<Command.Descriptor> getCommandDescriptors() {
+			return descriptors;
+		}
+
+		public List<Command.Platform> getCommandPlatforms() {
+			return platforms;
 		}
 
 		/**

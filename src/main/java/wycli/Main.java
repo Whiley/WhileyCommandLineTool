@@ -51,40 +51,60 @@ import wyfs.util.ZipFile;
  * @author David J. Pearce
  *
  */
-public class Main {
+public class Main implements Command.Environment {
 
 	/**
 	 * Path to the dependency repository within the global root.
 	 */
 	public static final Path.ID DEFAULT_REPOSITORY_PATH = Trie.fromString("repository");
 
-
 	// ========================================================================
 	// Instance Fields
 	// ========================================================================
-
+	private Logger logger = Logger.NULL;
+	private Build.Meter meter = Build.NULL_METER;
 	/**
-	 * The root of the build environment itself. From this, all relative paths
-	 * within the build environment are determined. For example, the location of
-	 * source files or the build configuration files, etc.
+	 * Package resolver is reponsible for resolving packages in remote repositories and caching them in the
+	 * global repository.
 	 */
-	protected Path.Root localRoot;
+	private final Package.Resolver resolver;
 	/**
-	 * The package resolver used in this workspace.
+	 * Plugin environment provides access to information sourced from the plugins, such as available
+	 * content-types, commands, etc.
 	 */
-	protected Package.Resolver resolver;
+	private final Plugin.Environment env;
+	/**
+	 * Global repository where generic information is stored (e.g. email address, access token, etc) that doesn't want
+	 * to be stored in e.g. version control and/or applies across multiple projects.
+	 */
+	private final FileRepository globalRepository;
+	/**
+	 * The repository matching files on the file system.  This is used for reading config files, identifying files which
+	 * have changed and synching with the main repository.
+	 */
+	private final FileRepository localRepository;
+	/**
+	 * The main repository for storing build artifacts and source files which is properly versioned.
+	 */
+	private final Build.Repository<?> buildRepository;
 
-	public Main(Configuration configuration, String dir, Path.Root repository) throws IOException {
-		super(configuration);
-		// Setup workspace root
-		this.localRoot = new DirectoryRoot(dir, registry);
+	public Main(Plugin.Environment env, FileRepository globalRepo, FileRepository localRepo, Build.Repository<?> buildRepo) {
+		this.env = env;
+		this.globalRepository = globalRepo;
+		this.localRepository = localRepo;
+		this.buildRepository = buildRepo;
 		// Setup package resolver
-		this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, registry, repository));
+		this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, env, repository));
 	}
 
 	@Override
-	public Root getRoot() {
-		return localRoot;
+	public List<Command.Descriptor> getCommandDescriptors() {
+		return env.getCommandDescriptors();
+	}
+
+	@Override
+	public List<Command.Platform> getCommandPlatforms() {
+		return env.getCommandPlatforms();
 	}
 
 	@Override
@@ -92,39 +112,72 @@ public class Main {
 		return resolver;
 	}
 
+	@Override
+	public Content.Registry getContentRegistry() {
+		return env;
+	}
+
+	@Override
+	public Build.Repository<?> getRepository() {
+		return buildRepository;
+	}
+
+	@Override
+	public Configuration get(Path.ID path) {
+		return null;
+	}
+
+	@Override
+	public Build.Meter getMeter() {
+		return meter;
+	}
+
+	@Override
+	public Logger getLogger() {
+		return logger;
+	}
+
+	public void setLogger(Logger logger) {
+		this.logger = logger;
+	}
+
+	public void setMeter(Build.Meter meter) {
+		this.meter = meter;
+	}
+
 	// ==================================================================
 	// Main Method
 	// ==================================================================
 
 	public static void main(String[] args) throws Exception {
-		Command.Environment environment = extractEnvironment();
-		// Construct the merged configuration
-		Configuration config = new ConfigurationCombinator(local, global, system);
-		// Construct the workspace
-		Main workspace = new Main(config, localRoot.toString(), repository);
+		Logger logger = Logger.NULL;
+		Build.Meter meter = Build.NULL_METER;
 		// Construct environment and execute arguments
-		Command.Descriptor descriptor = ROOT_DESCRIPTOR(workspace);
+		Command.Descriptor descriptor = wycli.commands.Root.DESCRIPTOR;
 		// Parse the given command-line
 		Command.Template template = new CommandParser(descriptor).parse(args);
 		// Apply verbose setting
 		boolean verbose = template.getOptions().get("verbose", Boolean.class);
 		int profile = template.getOptions().get("profile", Integer.class);
 		if(verbose || profile > 0) {
-			Logger logger = new Logger.Default(System.err);
-			workspace.setLogger(logger);
-			workspace.setMeter(new Meter("Build",logger,profile));
+			logger = new Logger.Default(System.err);
+			meter = new Meter("Build",logger,profile);
 		}
+		// Construct environment and determine path
+		Pair<Main,Path.ID> mp = constructMainEnvironment(logger);
+		Main env = mp.first();
+		Path.ID path = mp.second();
+		// Configure environment
+		env.setLogger(logger);
+		env.setMeter(meter);
+		//
 		int exitCode;
 		// Done
 		try {
-			// Select project (if applicable)
-			Command.Project project = workspace.open(pid);
 			// Create command instance
-			Command instance = descriptor.initialise(workspace);
+			Command instance = descriptor.initialise(env);
 			// Execute command
-			boolean ec = instance.execute(project,template);
-			// Flush all modified files to disk
-			workspace.closeAll();
+			boolean ec = instance.execute(path,template);
 			// Done
 			exitCode = ec ? 0 : 1;
 		} catch(SyntacticException e) {
@@ -139,8 +192,6 @@ public class Main {
 				e.printStackTrace();
 			}
 			exitCode = 2;
-		} finally {
-			workspace.closeAll();
 		}
 		System.exit(exitCode);
 	}
@@ -149,34 +200,36 @@ public class Main {
 	// Helpers
 	// ==================================================================
 
-	private static Pair<Command.Environment,Path.ID> constructEnvironment(Logger logger) throws IOException {
+	/**
+	 * Construct a command environment from the local file system.
+	 * @param logger
+	 * @return
+	 * @throws IOException
+	 */
+	private static Pair<Main, Path.ID> constructMainEnvironment(Logger logger) throws IOException {
 		// Determine system-wide directory
 		FileRepository systemRoot = determineSystemRoot();
 		// Determine user-wide directory
-		FileRepository globalRoot = determineGlobalRoot();
+		FileRepository globalRoot = determineGlobalRoot(logger);
 		// Read the system configuration file
-		Configuration system = readConfigFile(systemRoot,Trie.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
-		// Read the global configuration file
-		Configuration global = readConfigFile(globalRoot,Trie.fromString("wy"), logger, Schemas.GLOBAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
+		Configuration system = readConfigFile(systemRoot, Trie.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
 		// Construct plugin environment and activate plugins
-		Plugin.Environment env = activatePlugins(system,logger);
-		// Determine build root and relative path
-		Pair<FileRepository, Path.ID> lrp = determineLocalRoot(env);
-		// Determine workspace directory
-		FileRepository localRoot = lrp.first();
+		Plugin.Environment env = activatePlugins(system, logger);
+		// Determine top-level directory and relative path
+		Pair<File, Path.ID> lrp = determineLocalRootDirectory();
+		File localDir = lrp.first();
 		Path.ID pid = lrp.second();
-		// Extract the local configuration(s)
-		Command.Environment cenv = constructEnvironment(env, localRoot, logger, Trie.ROOT);
+		// Construct build directory
+		File buildDir = determineBuildDirectory(localDir, logger);
+		// Construct local root
+		// FIXME: filter needed for excluding build directory
+		FileRepository localRoot = new FileRepository(env, localDir);
+		// Determine build root
+		FileRepository buildRoot = new FileRepository(env, buildDir);
+		// Construct command environment!
+		Main menv = new Main(env, globalRoot, localRoot, buildRoot);
 		//
-		return new Pair<>(cenv,pid);
-	}
-
-	private static Command.Environment constructEnvironment(Plugin.Environment env, FileRepository root, Logger logger, Path.ID path) throws IOException {
-		Configuration local = readConfigFile(root, path, logger, Schemas.LOCAL_CONFIG_SCHEMA, LocalPackageRepository.SCHEMA, RemotePackageRepository.SCHEMA);
-		// Decide whether or not there are any children.
-
-		// Done
-		return new EnvironmentLeaf(env,local);
+		return new Pair<>(menv, pid);
 	}
 
 	/**
@@ -204,10 +257,31 @@ public class Main {
 	 * @return
 	 * @throws IOException
 	 */
-	private static FileRepository determineGlobalRoot() throws IOException {
+	private static FileRepository determineGlobalRoot(Logger logger) throws IOException {
 		String userhome = System.getProperty("user.home");
-		String whileydir = userhome + File.separator + ".whiley";
-		return new FileRepository(BOOT_REGISTRY, new File(whileydir));
+		File whileydir = new File(userhome + File.separator + ".whiley");
+		if(!whileydir.exists()) {
+			logger.logTimedMessage("mkdir " + whileydir.toString(), 0, 0);
+			whileydir.mkdirs();
+		}
+		return new FileRepository(BOOT_REGISTRY, whileydir);
+	}
+
+	/**
+	 * Determine the build root. That is, the hidden whiley directory at the top-level of the build system.
+	 *
+	 * @param dir root path of the build system we are in.
+	 * @return
+	 * @throws IOException
+	 */
+	private static File determineBuildDirectory(File dir, Logger logger) throws IOException {
+		File whileydir = new File(dir + File.separator + ".whiley");
+		if (!whileydir.exists()) {
+			logger.logTimedMessage("mkdir " + whileydir.toString(), 0, 0);
+			whileydir.mkdirs();
+		}
+		// NOTE: should not be a file repository!
+		return whileydir;
 	}
 
 	/**
@@ -219,7 +293,7 @@ public class Main {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<FileRepository, Path.ID> determineLocalRoot(Plugin.Environment env) throws IOException {
+	private static Pair<File, Path.ID> determineLocalRootDirectory() throws IOException {
 		// Search for inner configuration.
 		File inner = findConfigFile(new File("."));
 		if (inner == null) {
@@ -229,12 +303,12 @@ public class Main {
 		File outer = findConfigFile(inner.getParentFile());
 		if (outer == null) {
 			// No enclosing configuration found.
-			return new Pair<>(new FileRepository(env, inner), Trie.ROOT);
+			return new Pair<>(inner, Trie.ROOT);
 		} else {
 			// Calculate relative path
 			String path = inner.getPath().replace(outer.getPath(), "").replace(File.separatorChar, '/');
 			// Done
-			return new Pair<>(new FileRepository(env, outer), Trie.fromString(path));
+			return new Pair<>(outer, Trie.fromString(path));
 		}
 	}
 
@@ -339,63 +413,6 @@ public class Main {
 		}
 	}
 
-	private static abstract class Environment implements Command.Environment {
-		private final Package.Resolver resolver;
-		private final Plugin.Environment env;
-
-		public Environment(Plugin.Environment env) {
-			this.env = env;
-		}
-
-		@Override
-		public List<Command.Descriptor> getCommandDescriptors() {
-		   return env.getCommandDescriptors();
-		}
-
-		@Override
-		public Package.Resolver getPackageResolver() {
-			return resolver;
-		}
-
-		@Override
-		public Content.Registry getContentRegistry() {
-			return env;
-		}
-
-		@Override
-		public List<Command.Platform> getBuildPlatforms() {
-			return env.getBuildPlatforms();
-		}
-
-		@Override
-		public Build.Repository<?> getRepository() {
-			return null;
-		}
-
-		@Override
-		public Command.Environment get(Path.ID path) {
-			return null;
-		}
-
-		@Override
-		public Build.Meter getMeter() {
-			return null;
-		}
-
-		@Override
-		public Logger getLogger() {
-			return null;
-		}
-
-		@Override
-		public Schema getConfigurationSchema() {
-			return null;
-		}
-	}
-
-	private static class EnvironmentLeaf extends Environment {
-
-	}
 
 	public static class Meter implements Build.Meter {
 		private final String name;
