@@ -14,6 +14,10 @@
 package wycli.lang;
 
 import wybs.util.Logger;
+import wyfs.lang.Content;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * <p>
@@ -25,7 +29,7 @@ import wybs.util.Logger;
  * @author David J. Pearce
  *
  */
-public interface Module {
+public interface Plugin {
 
 	/**
 	 * A module Context provides a mechanism for modules to interact with their
@@ -96,7 +100,7 @@ public interface Module {
 		 *
 		 * @param context
 		 */
-		public Module start(Context context);
+		public Plugin start(Context context);
 
 		/**
 		 * This method is called when the module is stopped. Any resources used
@@ -105,6 +109,84 @@ public interface Module {
 		 *
 		 * @param context
 		 */
-		public void stop(Module module, Context context);
+		public void stop(Plugin module, Context context);
+	}
+
+	/**
+	 * Provides a default plugin environment which is generally sufficient.
+	 */
+	public static class Environment implements Plugin.Context {
+		/**
+		 * Logging stream, which is null by default.
+		 */
+		private Logger logger = Logger.NULL;
+
+		/**
+		 * The extension points represent registered implementations of interfaces. Each extension point represents a
+		 * class that will be instantiated and configured, and will contribute to some function within the compiler. The
+		 * main extension points are: <i>Routes</i>, <i>Builders</i> and
+		 * <i>ContentTypes</i>.
+		 */
+		public final HashMap<Class<?>, ExtensionPoint<?>> extensionPoints = new HashMap<>();
+
+		/**
+		 * List of all known content types to the system.
+		 */
+		protected final ArrayList<Content.Type<?>> contentTypes = new ArrayList<>();
+
+		/**
+		 * List of all known commands registered by plugins.
+		 */
+		protected final ArrayList<Command.Descriptor> descriptors = new ArrayList<>();
+
+		/**
+		 * List of all known build platforms registered by plugins.
+		 */
+		protected final ArrayList<Command.Platform> platforms = new ArrayList<>();
+
+		public Environment(Logger logger) {
+			this.logger = logger;
+			create(Content.Type.class, p -> contentTypes.add(p));
+			create(Command.Descriptor.class, p -> descriptors.add(p));
+			create(Command.Platform.class, p -> platforms.add(p));
+		}
+
+		/**
+		 * Activate a new plugin within the system.
+		 *
+		 * @param activator
+		 */
+		public void activate(wycli.lang.Plugin.Activator activator) {
+			Plugin p = activator.start(this);
+			// NOTE: there is quite a lot more we could do here.
+		}
+
+		// ==================================================================
+		// Context Methods
+		// ==================================================================
+
+		@Override
+		public <T> void register(Class<T> ep, T feature) {
+			wycli.lang.Plugin.ExtensionPoint<T> container = (wycli.lang.Plugin.ExtensionPoint<T>) extensionPoints.get(ep);
+			if (ep == null) {
+				throw new RuntimeException("Missing extension point: " + ep.getCanonicalName());
+			} else {
+				container.register(feature);
+			}
+		}
+
+		@Override
+		public <T> void create(Class<T> extension, wycli.lang.Plugin.ExtensionPoint<T> ep) {
+			if (extensionPoints.containsKey(extension)) {
+				throw new RuntimeException("Extension point already exists: " + extension);
+			} else {
+				extensionPoints.put(extension, ep);
+			}
+		}
+
+		@Override
+		public void logTimedMessage(String msg, long time, long memory) {
+			logger.logTimedMessage(msg, time, memory);
+		}
 	}
 }

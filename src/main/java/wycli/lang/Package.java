@@ -110,7 +110,7 @@ public interface Package {
 		 * @param pkg
 		 * @return
 		 */
-		public Set<SemanticVersion> list(String pkg) throws IOException;
+		public Set<Semantic.Version> list(String pkg) throws IOException;
 
 		/**
 		 * Get a given package in this repository. If no such package exists, an
@@ -120,13 +120,13 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		public Path.Root get(String name, SemanticVersion version) throws IOException;
+		public Path.Root get(String name, Semantic.Version version) throws IOException;
 
 		/**
 		 * Put a given package into this repository.
 		 *
 		 * @param pkg
 		 */
-		public void put(ZipFile pkg, String name, SemanticVersion version) throws IOException;
+		public void put(ZipFile pkg, String name, Semantic.Version version) throws IOException;
 	}
 }

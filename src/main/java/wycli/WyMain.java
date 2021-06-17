@@ -22,17 +22,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import wybs.lang.Build;
-import wybs.lang.Build.Meter;
 import wybs.lang.SyntacticException;
-import wybs.lang.SyntacticItem;
 import wybs.util.Logger;
-import wybs.util.AbstractCompilationUnit.Value;
 import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
 import wycli.cfg.ConfigurationCombinator;
 import wycli.lang.Command;
 import wycli.lang.Package;
-import wycli.util.AbstractWorkspace;
 import wycli.util.CommandParser;
 import wycli.util.LocalPackageRepository;
 import wycli.util.RemotePackageRepository;

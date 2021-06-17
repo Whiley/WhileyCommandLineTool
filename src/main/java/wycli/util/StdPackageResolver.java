@@ -25,7 +25,7 @@ import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
 import wycli.lang.Package;
-import wycli.lang.SemanticVersion;
+import wycli.lang.Semantic;
 import wycli.lang.Package.Repository;
 import wyfs.lang.Path;
 import wyfs.util.Pair;
@@ -73,7 +73,7 @@ public class StdPackageResolver implements Package.Resolver {
 		// Process current batch of dependencies
 		for (Pair<String, String> dep : batch) {
 			String name = dep.first();
-			SemanticVersion version = resolveLatestCompatible(name,new SemanticVersion(dep.second()));
+			Semantic.Version version = resolveLatestCompatible(name,new Semantic.Version(dep.second()));
 			Path.Root pkg = repository.get(name, version);
 			if (pkg != null) {
 				// Read package configuration file.
@@ -113,13 +113,13 @@ public class StdPackageResolver implements Package.Resolver {
 	 * @return
 	 * @throws IOException
 	 */
-	private SemanticVersion resolveLatestCompatible(String pkg, SemanticVersion version) throws IOException {
+	private Semantic.Version resolveLatestCompatible(String pkg, Semantic.Version version) throws IOException {
 		// list all possible versions of the given package
-		Set<SemanticVersion> versions = repository.list(pkg);
+		Set<Semantic.Version> versions = repository.list(pkg);
 		//
-		SemanticVersion latest = version;
+		Semantic.Version latest = version;
 		//
-		for (SemanticVersion v : versions) {
+		for (Semantic.Version v : versions) {
 			if (v.getMajor() == version.getMajor() && v.compareTo(latest) > 0) {
 				latest = v;
 			}
