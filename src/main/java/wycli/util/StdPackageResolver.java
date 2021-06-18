@@ -21,6 +21,7 @@ import java.util.Set;
 
 import wybs.lang.Build;
 import wybs.util.AbstractCompilationUnit.Value.UTF8;
+import wycli.Schemas;
 import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
@@ -84,7 +85,7 @@ public class StdPackageResolver implements Package.Resolver {
 							.logTimedMessage("Corrupt package " + pkg + "-v" + version + " (missing wy.toml)", 0, 0);
 				} else {
 					// Convert file into configuration
-					Configuration cf = entry.read().toConfiguration(Package.SCHEMA, false);
+					Configuration cf = entry.read().toConfiguration(Schemas.PACKAGE_SCHEMA, false);
 					// Add all (non-visited) child dependencies
 					for(Pair<String, String> d : extractDependencies(cf)) {
 						if(!visited.contains(d)) {

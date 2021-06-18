@@ -14,7 +14,6 @@
 package wycli;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
@@ -22,7 +21,6 @@ import java.util.*;
 import wybs.util.AbstractCompilationUnit.Value;
 import wybs.lang.Build;
 import wybs.lang.SyntacticException;
-import wybs.util.AbstractCompilationUnit;
 import wybs.util.FileRepository;
 import wybs.util.Logger;
 import wycli.cfg.*;
@@ -30,14 +28,9 @@ import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Plugin;
 import wycli.util.CommandParser;
-import wycli.util.LocalPackageRepository;
-import wycli.util.RemotePackageRepository;
-import wycli.util.StdPackageResolver;
 import wyfs.lang.Content;
 import wyfs.lang.Path;
-import wyfs.lang.Path.Root;
 import wyfs.util.DefaultContentRegistry;
-import wyfs.util.DirectoryRoot;
 import wyfs.util.Pair;
 import wyfs.util.Trie;
 import wyfs.util.ZipFile;
@@ -52,7 +45,6 @@ import wyfs.util.ZipFile;
  *
  */
 public class Main implements Command.Environment {
-
 	/**
 	 * Path to the dependency repository within the global root.
 	 */
@@ -94,7 +86,8 @@ public class Main implements Command.Environment {
 		this.localRepository = localRepo;
 		this.buildRepository = buildRepo;
 		// Setup package resolver
-		this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, env, repository));
+		//this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, env, repository));
+		this.resolver = null;
 	}
 
 	@Override
