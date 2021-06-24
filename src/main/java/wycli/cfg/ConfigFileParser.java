@@ -40,9 +40,9 @@ public class ConfigFileParser {
 	private final ArrayList<Token> tokens;
 	private int index;
 
-	public ConfigFileParser(List<Token> tokens) {
+	public ConfigFileParser(Path.ID id, List<Token> tokens) {
 		this.tokens = new ArrayList<>(tokens);
-		this.file = new ConfigFile(null);
+		this.file = new ConfigFile(id);
 	}
 
 	/**

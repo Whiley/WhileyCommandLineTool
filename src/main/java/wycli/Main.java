@@ -215,7 +215,6 @@ public class Main implements Command.Environment {
 		// Construct build directory
 		File buildDir = determineBuildDirectory(localDir, logger);
 		// Construct local root
-		// FIXME: filter needed for excluding build directory
 		FileRepository localRoot = new FileRepository(env, localDir);
 		// Determine build root
 		FileRepository buildRoot = new FileRepository(env, buildDir);
@@ -378,7 +377,7 @@ public class Main implements Command.Environment {
 			// Read the configuration file
 			ConfigFile cf = root.get().get(ConfigFile.ContentType,id);
 			// Log the event
-			logger.logTimedMessage("Read configuration file " + id, 0, 0);
+			logger.logTimedMessage("Read " + root.getDirectory() + "/" + id + ".toml",0, 0);
 			// Construct configuration according to given schema
 			return cf.toConfiguration(schema, false);
 		} catch (SyntacticException e) {

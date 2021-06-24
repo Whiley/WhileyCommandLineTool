@@ -28,7 +28,7 @@ public class Schemas {
      * Schema for system configuration (i.e. which applies to all users).
      */
     public static Configuration.Schema SYSTEM_CONFIG_SCHEMA = Configuration.fromArray(
-            Configuration.UNBOUND_STRING(Trie.fromString("plugins/*"), "list of globally installed plugins", true));
+            Configuration.UNBOUND_BOOLEAN(Trie.fromString("plugins/*"), "list of globally installed plugins", true));
 
     /**
      * Schema for global configuration (i.e. which applies to all projects for a given user).

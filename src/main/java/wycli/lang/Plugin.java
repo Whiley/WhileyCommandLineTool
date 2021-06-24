@@ -221,7 +221,7 @@ public interface Plugin {
 					return ith;
 				}
 			}
-			throw new IllegalArgumentException("unknown file type: " + suffix);
+			return null;
 		}
 	}
 }

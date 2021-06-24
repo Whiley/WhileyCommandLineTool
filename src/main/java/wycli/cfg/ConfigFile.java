@@ -46,14 +46,17 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 
 		@Override
 		public ConfigFile read(Path.Entry<ConfigFile> e, InputStream inputstream) throws IOException {
+			Path.ID id = e == null ? null : e.id();
 			ConfigFileLexer lexer = new ConfigFileLexer(e.inputStream());
-			ConfigFileParser parser = new ConfigFileParser(lexer.scan());
+			ConfigFileParser parser = new ConfigFileParser(id,lexer.scan());
 			return parser.read();
 		}
 
 		@Override
 		public ConfigFile read(ID id, InputStream input) throws IOException {
-			throw new UnsupportedOperationException();
+			ConfigFileLexer lexer = new ConfigFileLexer(input);
+			ConfigFileParser parser = new ConfigFileParser(id,lexer.scan());
+			return parser.read();
 		}
 
 		@Override
@@ -95,6 +98,13 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		//
 		this.declarations = new Tuple<>();
 		this.id = entry.id();
+	}
+
+	public ConfigFile(Path.ID id) {
+		super(null);
+		//
+		this.declarations = new Tuple<>();
+		this.id = id;
 	}
 
 	public ConfigFile(Path.Entry<ConfigFile> entry, Tuple<Declaration> declarations) {
