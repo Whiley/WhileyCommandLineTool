@@ -13,7 +13,7 @@
 // limitations under the License.
 package wycli.lang;
 
-import wybs.util.Logger;
+import wycc.util.Logger;
 import wyfs.lang.Content;
 import wyfs.lang.Path;
 

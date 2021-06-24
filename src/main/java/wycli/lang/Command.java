@@ -15,16 +15,13 @@ package wycli.lang;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 
-import wybs.lang.Build;
-import wybs.lang.Build.Repository;
-import wybs.lang.Build.Meter;
-import wybs.util.Logger;
-import wybs.util.AbstractCompilationUnit.Value;
+import wycc.lang.Build;
+import wycc.lang.Build.Repository;
+import wycc.lang.Build.Meter;
+import wycc.util.Logger;
 import wycli.cfg.Configuration;
-import wycli.lang.Package;
 import wyfs.lang.Content;
 import wyfs.lang.Path;
 
@@ -34,7 +31,7 @@ import wyfs.lang.Path;
  * @author David J. Pearce
  *
  */
-public interface Command<S extends Build.State<S>> {
+public interface Command<S extends Build.SnapShot<S>> {
 
 	/**
 	 * Get a descriptor for this command.
@@ -134,7 +131,7 @@ public interface Command<S extends Build.State<S>> {
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface Platform<S extends Build.State<S>> {
+	public interface Platform<S extends Build.SnapShot<S>> {
 		/**
 		 * Get the unique name identifying this platform.
 		 *

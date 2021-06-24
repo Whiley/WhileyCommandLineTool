@@ -19,8 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import wybs.lang.SyntacticItem;
-import wybs.util.AbstractCompilationUnit.Value;
+import wycc.util.AbstractCompilationUnit.Value;
 import wyfs.lang.Path;
 import wyfs.lang.Path.Filter;
 import wyfs.lang.Path.ID;

@@ -18,16 +18,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import wybs.util.Logger;
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
-import wyfs.lang.Path;
-import wyfs.util.Trie;
+import wycc.lang.Path;
 
 public class Help implements Command {
 
     public static final Configuration.Schema SCHEMA = Configuration
-            .fromArray(Configuration.BOUND_INTEGER(Trie.fromString("width"), "fix display width", false, 0));
+            .fromArray(Configuration.BOUND_INTEGER(Path.fromString("width"), "fix display width", false, 0));
 
     public static final List<Option.Descriptor> OPTIONS = Arrays
             .asList(Command.OPTION_NONNEGATIVE_INTEGER("width", "fix display width", 80));
@@ -89,7 +87,7 @@ public class Help implements Command {
     }
 
     @Override
-    public boolean execute(Path.ID path, Template template) throws Exception {
+    public boolean execute(wyfs.lang.Path.ID path, Template template) throws Exception {
         // Extract arguments
         List<String> args = template.getArguments();
         //

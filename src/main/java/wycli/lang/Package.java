@@ -16,16 +16,9 @@ package wycli.lang;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
-import wybs.lang.Build;
-import wybs.util.AbstractCompilationUnit.Value;
-import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
-import wyfs.lang.Content;
 import wyfs.lang.Path;
-import wyfs.util.Pair;
-import wyfs.util.Trie;
 import wyfs.util.ZipFile;
 
 public interface Package {

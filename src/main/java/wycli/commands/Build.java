@@ -25,18 +25,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-import wybs.lang.SyntacticHeap;
-import wybs.lang.SyntacticItem;
-import wybs.lang.SourceFile;
-import wybs.lang.Build.Repository;
-import wybs.util.AbstractCompilationUnit;
-import wybs.util.AbstractCompilationUnit.Attribute;
-import wybs.util.AbstractCompilationUnit.Attribute.Span;
+import wycc.lang.SyntacticHeap;
+import wycc.lang.SyntacticItem;
+import wycc.lang.SourceFile;
+import wycc.lang.Build.Repository;
+import wycc.util.AbstractCompilationUnit;
+import wycc.util.AbstractCompilationUnit.Attribute;
+import wycc.util.AbstractCompilationUnit.Attribute.Span;
 import wycli.cfg.Configuration;
 import wycli.cfg.Configuration.Schema;
 import wycli.lang.Command;
 import wyfs.lang.Path;
-import wyfs.util.Pair;
+import wycc.util.Pair;
 
 public class Build implements Command {
 	/**
@@ -123,7 +123,7 @@ public class Build implements Command {
 	@Override
 	public boolean execute(Path.ID path, Template template) throws Exception {
 		Repository repository = environment.getRepository();
-		List<wybs.lang.Build.Task> tasks = new ArrayList<>();
+		List<wycc.lang.Build.Task> tasks = new ArrayList<>();
 		// Construct tasks
 		for(Command.Platform p : environment.getCommandPlatforms()) {
 			tasks.add(p.initialise(environment));
@@ -140,18 +140,18 @@ public class Build implements Command {
 		return (pipeline.completed == tasks.size());
 	}
 
-	private static class Pipeline<S extends wybs.lang.Build.State<S>> implements Function<S,S> {
-		private final List<wybs.lang.Build.Task<S>> tasks;
+	private static class Pipeline<S extends wycc.lang.Build.SnapShot<S>> implements Function<S,S> {
+		private final List<wycc.lang.Build.Task<S>> tasks;
 		private int completed;
 
-		private Pipeline(List<wybs.lang.Build.Task<S>> tasks) {
+		private Pipeline(List<wycc.lang.Build.Task<S>> tasks) {
 			this.tasks = tasks;
 		}
 
 		@Override
 		public S apply(S s) {
 			for (int i = 0; i != tasks.size(); ++i) {
-				wybs.lang.Build.Task<S> ith = tasks.get(i);
+				wycc.lang.Build.Task<S> ith = tasks.get(i);
 				Pair<S, Boolean> p = ith.apply(s);
 				s = p.first();
 				if (!p.second()) {

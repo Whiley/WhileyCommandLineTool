@@ -17,7 +17,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import wybs.lang.SyntacticException;
+import wycc.lang.SyntacticException;
 import wyfs.lang.Path;
 
 /**

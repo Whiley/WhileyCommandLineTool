@@ -19,13 +19,12 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import wybs.util.AbstractCompilationUnit.Identifier;
+import wycc.util.AbstractCompilationUnit.Identifier;
 import wycli.cfg.ConfigFile.*;
 import wycli.cfg.ConfigFileLexer.Token;
-import wybs.lang.SyntacticHeap;
-import wybs.lang.SyntacticItem;
-import wybs.lang.SyntacticException;
-import wybs.util.AbstractCompilationUnit.*;
+import wycc.lang.SyntacticItem;
+import wycc.lang.SyntacticException;
+import wycc.util.AbstractCompilationUnit.*;
 import wyfs.lang.Path;
 
 /**

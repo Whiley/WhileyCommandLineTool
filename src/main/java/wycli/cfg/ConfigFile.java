@@ -21,32 +21,31 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import wybs.lang.Build;
-import wybs.lang.SyntacticItem;
-import wybs.lang.SyntacticException;
-import wybs.util.AbstractCompilationUnit;
-import wybs.util.AbstractSyntacticItem;
+import wycc.lang.Build;
+import wycc.lang.SyntacticItem;
+import wycc.lang.SyntacticException;
+import wycc.util.AbstractCompilationUnit;
+import wycc.util.AbstractSyntacticItem;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 import wyfs.lang.Path.ID;
-import wyfs.util.Trie;
+import wycc.lang.Path;
 
-public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements Build.Entry {
+public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements Build.Artifact {
 	// =========================================================================
 	// Content Type
 	// =========================================================================
 
 	public static final Content.Type<ConfigFile> ContentType = new Content.Type<ConfigFile>() {
-		public Path.Entry<ConfigFile> accept(Path.Entry<?> e) {
+		public wyfs.lang.Path.Entry<ConfigFile> accept(wyfs.lang.Path.Entry<?> e) {
 			if (e.contentType() == this) {
-				return (Path.Entry<ConfigFile>) e;
+				return (wyfs.lang.Path.Entry<ConfigFile>) e;
 			}
 			return null;
 		}
 
 		@Override
-		public ConfigFile read(Path.Entry<ConfigFile> e, InputStream inputstream) throws IOException {
-			Path.ID id = e == null ? null : e.id();
+		public ConfigFile read(wyfs.lang.Path.Entry<ConfigFile> e, InputStream inputstream) throws IOException {
+			wyfs.lang.Path.ID id = e == null ? null : e.id();
 			ConfigFileLexer lexer = new ConfigFileLexer(e.inputStream());
 			ConfigFileParser parser = new ConfigFileParser(id,lexer.scan());
 			return parser.read();
@@ -87,27 +86,27 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 	// =========================================================================
 	// Constructors
 	// =========================================================================
-	private final Path.ID id;
+	private final wyfs.lang.Path.ID id;
 	/**
 	 * The list of declarations which make up this configuration.
 	 */
 	private Tuple<Declaration> declarations;
 
-	public ConfigFile(Path.Entry<ConfigFile> entry) {
+	public ConfigFile(wyfs.lang.Path.Entry<ConfigFile> entry) {
 		super(entry);
 		//
 		this.declarations = new Tuple<>();
 		this.id = entry.id();
 	}
 
-	public ConfigFile(Path.ID id) {
+	public ConfigFile(wyfs.lang.Path.ID id) {
 		super(null);
 		//
 		this.declarations = new Tuple<>();
 		this.id = id;
 	}
 
-	public ConfigFile(Path.Entry<ConfigFile> entry, Tuple<Declaration> declarations) {
+	public ConfigFile(wyfs.lang.Path.Entry<ConfigFile> entry, Tuple<Declaration> declarations) {
 		super(entry);
 		//
 		this.declarations = declarations;
@@ -117,7 +116,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 	}
 
 	@Override
-	public Path.ID getID() {
+	public wyfs.lang.Path.ID getID() {
 		return id;
 	}
 
@@ -337,26 +336,26 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		}
 
 		@Override
-		public List<ID> matchAll(Path.Filter filter) {
+		public List<ID> matchAll(wyfs.lang.Path.Filter filter) {
 			ArrayList<ID> matches = new ArrayList<>();
-			match(Trie.ROOT,filter,declarations,matches);
+			match(Path.ROOT,filter,declarations,matches);
 			return matches;
 		}
 
-		private void match(Trie id, Path.Filter filter, Tuple<? extends Declaration> declarations, ArrayList<ID> matches) {
+		private void match(Path id, wyfs.lang.Path.Filter filter, Tuple<? extends Declaration> declarations, ArrayList<ID> matches) {
 			for (int i = 0; i != declarations.size(); ++i) {
 				Declaration decl = declarations.get(i);
 				if (decl instanceof Table) {
 					Table table = (Table) decl;
 					// FIXME: could be more efficient!
-					Trie tid = id;
+					Path tid = id;
 					for (Identifier c : table.getName()) {
 						tid = tid.append(c.toString());
 					}
 					match(tid, filter, table.getContents(), matches);
 				} else if (decl instanceof KeyValuePair) {
 					KeyValuePair kvp = (KeyValuePair) decl;
-					Trie match = id.append(kvp.getKey().toString());
+					Path match = id.append(kvp.getKey().toString());
 					if (filter.matches(match)) {
 						matches.add(match);
 					}
@@ -368,20 +367,20 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 			List<KeyValueDescriptor<?>> descriptors = schema.getDescriptors();
 			// Matched holds all concrete key-value pairs which are matched. This allows us
 			// to identify any which were not matched and, hence, are invalid
-			Set<Path.ID> matched = new HashSet<>();
+			Set<wyfs.lang.Path.ID> matched = new HashSet<>();
 			// Validate all descriptors against given values.
 			for (int i = 0; i != descriptors.size(); ++i) {
 				KeyValueDescriptor descriptor = descriptors.get(i);
 				// Sanity check the expected kind
 				Class<?> kind = descriptor.getType();
 				// Identify all matching keys
-				List<Path.ID> results = matchAll(descriptor.getFilter());
+				List<wyfs.lang.Path.ID> results = matchAll(descriptor.getFilter());
 				// Sanity check whether required
 				if(results.size() == 0 && descriptor.isRequired()) {
 					throw new SyntacticException("missing key value: " + descriptor.getFilter(), getEntry(), null);
 				}
 				// Check all matching keys
-				for (Path.ID id : results) {
+				for (wyfs.lang.Path.ID id : results) {
 					// Find corresponding key value pair.
 					KeyValuePair kvp = getKeyValuePair(id, declarations);
 					// NOTE: kvp != null
@@ -399,9 +398,9 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 			}
 			if(strict) {
 				// Check whether any unmatched key-valid pairs exist or not
-				List<Path.ID> all = matchAll(Trie.fromString("**/*"));
+				List<wyfs.lang.Path.ID> all = matchAll(Path.fromString("**/*"));
 				for(int i=0;i!=all.size();++i) {
-					Path.ID id = all.get(i);
+					wyfs.lang.Path.ID id = all.get(i);
 					if(!matched.contains(id)) {
 						// Found unmatched attribute
 						KeyValuePair kvp = getKeyValuePair(id, declarations);

@@ -19,8 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import wybs.lang.Build;
-import wybs.util.AbstractCompilationUnit.Value.UTF8;
+import wycc.util.AbstractCompilationUnit.Value.UTF8;
 import wycli.Schemas;
 import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
@@ -28,9 +27,8 @@ import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Semantic;
 import wycli.lang.Package.Repository;
-import wyfs.lang.Path;
-import wyfs.util.Pair;
-import wyfs.util.Trie;
+import wycc.util.Pair;
+import wycc.lang.Path;
 
 /**
  * Provides a default and relatively simplistic approach for resolving packages.
@@ -48,8 +46,8 @@ public class StdPackageResolver implements Package.Resolver {
 	}
 
 	@Override
-	public List<Path.Root> resolve(Configuration cf) throws IOException {
-		ArrayList<Path.Root> packages = new ArrayList<>();
+	public List<wyfs.lang.Path.Root> resolve(Configuration cf) throws IOException {
+		ArrayList<wyfs.lang.Path.Root> packages = new ArrayList<>();
 		// Extract all dependencies from target config file
 		List<Pair<String,String>> dependencies = extractDependencies(cf);
 		// Visited set stores all packages we have visited. This is used to ensure no
@@ -68,17 +66,17 @@ public class StdPackageResolver implements Package.Resolver {
 		return repository;
 	}
 
-	private List<Pair<String, String>> process(List<Path.Root> packages, List<Pair<String, String>> batch, Set<Pair<String, String>> visited) throws IOException {
+	private List<Pair<String, String>> process(List<wyfs.lang.Path.Root> packages, List<Pair<String, String>> batch, Set<Pair<String, String>> visited) throws IOException {
 		// Children will store all dependencies of those in batch
 		ArrayList<Pair<String,String>> children = new ArrayList<>();
 		// Process current batch of dependencies
 		for (Pair<String, String> dep : batch) {
 			String name = dep.first();
 			Semantic.Version version = resolveLatestCompatible(name,new Semantic.Version(dep.second()));
-			Path.Root pkg = repository.get(name, version);
+			wyfs.lang.Path.Root pkg = repository.get(name, version);
 			if (pkg != null) {
 				// Read package configuration file.
-				Path.Entry<ConfigFile> entry = pkg.get(Trie.fromString("wy"), ConfigFile.ContentType);
+				wyfs.lang.Path.Entry<ConfigFile> entry = pkg.get(Path.fromString("wy"), ConfigFile.ContentType);
 				if (entry == null) {
 					// Something is wrong
 					environment.getLogger()
@@ -131,11 +129,11 @@ public class StdPackageResolver implements Package.Resolver {
 
 	private List<Pair<String, String>> extractDependencies(Configuration cf) {
 		//
-		List<Path.ID> deps = cf.matchAll(Trie.fromString("dependencies/**"));
+		List<wyfs.lang.Path.ID> deps = cf.matchAll(Path.fromString("dependencies/**"));
 		// Determine dependency roots
 		List<Pair<String, String>> pairs = new ArrayList<>();
 		for (int i = 0; i != deps.size(); ++i) {
-			Path.ID dep = deps.get(i);
+			wyfs.lang.Path.ID dep = deps.get(i);
 			// Get dependency name
 			String name = dep.get(1);
 			// Get version string

@@ -18,11 +18,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 
-import wybs.util.AbstractCompilationUnit.Value;
-import wybs.lang.Build;
-import wybs.lang.SyntacticException;
-import wybs.util.FileRepository;
-import wybs.util.Logger;
+import wycc.util.AbstractCompilationUnit.Value;
+import wycc.lang.Build;
+import wycc.lang.SyntacticException;
+import wycc.util.FileRepository;
+import wycc.util.Logger;
 import wycli.cfg.*;
 import wycli.commands.Help;
 import wycli.lang.Command;
@@ -30,10 +30,9 @@ import wycli.lang.Package;
 import wycli.lang.Plugin;
 import wycli.util.CommandParser;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 import wyfs.util.DefaultContentRegistry;
-import wyfs.util.Pair;
-import wyfs.util.Trie;
+import wycc.util.Pair;
+import wycc.lang.Path;
 import wyfs.util.ZipFile;
 
 /**
@@ -49,7 +48,7 @@ public class Main implements Command.Environment {
 	/**
 	 * Path to the dependency repository within the global root.
 	 */
-	public static final Path.ID DEFAULT_REPOSITORY_PATH = Trie.fromString("repository");
+	public static final wyfs.lang.Path.ID DEFAULT_REPOSITORY_PATH = Path.fromString("repository");
 
 	public static final Command.Descriptor[] DEFAULT_COMMANDS = {
 			Help.DESCRIPTOR, wycli.commands.Build.DESCRIPTOR
@@ -121,7 +120,7 @@ public class Main implements Command.Environment {
 	}
 
 	@Override
-	public Configuration get(Path.ID path) {
+	public Configuration get(wyfs.lang.Path.ID path) {
 		return null;
 	}
 
@@ -151,9 +150,9 @@ public class Main implements Command.Environment {
 	public static void main(String[] args) throws Exception {
 		int exitCode;
 		// Construct environment and determine path
-		Pair<Main,Path.ID> mp = constructMainEnvironment(BOOT_LOGGER);
+		Pair<Main, wyfs.lang.Path.ID> mp = constructMainEnvironment(BOOT_LOGGER);
 		Main env = mp.first();
-		Path.ID path = mp.second();
+		wyfs.lang.Path.ID path = mp.second();
 		// Add default descriptors
 		env.getCommandDescriptors().addAll(Arrays.asList(DEFAULT_COMMANDS));
 		// Construct environment and execute arguments
@@ -202,19 +201,19 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<Main, Path.ID> constructMainEnvironment(Logger logger) throws IOException {
+	private static Pair<Main, wyfs.lang.Path.ID> constructMainEnvironment(Logger logger) throws IOException {
 		// Determine system-wide directory
 		FileRepository systemRoot = determineSystemRoot();
 		// Determine user-wide directory
 		FileRepository globalRoot = determineGlobalRoot(logger);
 		// Read the system configuration file
-		Configuration system = readConfigFile(systemRoot, Trie.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
+		Configuration system = readConfigFile(systemRoot, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
 		// Construct plugin environment and activate plugins
 		Plugin.Environment env = activatePlugins(system, logger);
 		// Determine top-level directory and relative path
-		Pair<File, Path.ID> lrp = determineLocalRootDirectory();
+		Pair<File, wyfs.lang.Path.ID> lrp = determineLocalRootDirectory();
 		File localDir = lrp.first();
-		Path.ID pid = lrp.second();
+		wyfs.lang.Path.ID pid = lrp.second();
 		// Construct build directory
 		File buildDir = determineBuildDirectory(localDir, logger);
 		// Construct local root
@@ -288,7 +287,7 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<File, Path.ID> determineLocalRootDirectory() throws IOException {
+	private static Pair<File, wyfs.lang.Path.ID> determineLocalRootDirectory() throws IOException {
 		// Search for inner configuration.
 		File inner = findConfigFile(new File("."));
 		if (inner == null) {
@@ -298,12 +297,12 @@ public class Main implements Command.Environment {
 		File outer = findConfigFile(inner.getParentFile());
 		if (outer == null) {
 			// No enclosing configuration found.
-			return new Pair<>(inner, Trie.ROOT);
+			return new Pair<>(inner, Path.ROOT);
 		} else {
 			// Calculate relative path
 			String path = inner.getPath().replace(outer.getPath(), "").replace(File.separatorChar, '/');
 			// Done
-			return new Pair<>(outer, Trie.fromString(path));
+			return new Pair<>(outer, Path.fromString(path));
 		}
 	}
 
@@ -319,9 +318,9 @@ public class Main implements Command.Environment {
 	private static Plugin.Environment activatePlugins(Configuration global, Logger logger) {
 		Plugin.Environment env = new Plugin.Environment(logger);
 		// Determine the set of install plugins
-		List<Path.ID> plugins = global.matchAll(Trie.fromString("plugins/*"));
+		List<wyfs.lang.Path.ID> plugins = global.matchAll(Path.fromString("plugins/*"));
 		// start modules
-		for (Path.ID id : plugins) {
+		for (wyfs.lang.Path.ID id : plugins) {
 			String activator = id.toString();
 			Value.Bool enabled = global.get(Value.Bool.class, id);
 			// Only activate if enabled
@@ -378,7 +377,7 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(FileRepository root, Path.ID id, Logger logger, Configuration.Schema... schemas) throws IOException {
+	public static Configuration readConfigFile(FileRepository root, wyfs.lang.Path.ID id, Logger logger, Configuration.Schema... schemas) throws IOException {
 		// Combine schemas together
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
 		try {
@@ -440,7 +439,7 @@ public class Main implements Command.Environment {
 				r.parent = this;
 				return r;
 			} else {
-				return wybs.lang.Build.NULL_METER;
+				return wycc.lang.Build.NULL_METER;
 			}
 		}
 

@@ -19,7 +19,7 @@ import java.util.List;
 import wycli.lang.Command;
 import wycli.lang.Command.Option;
 import wycli.lang.Command.Template;
-import wyfs.util.Pair;
+import wycc.util.Pair;
 
 /**
  * <p>
