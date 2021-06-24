@@ -24,6 +24,7 @@ import wybs.lang.SyntacticException;
 import wybs.util.FileRepository;
 import wybs.util.Logger;
 import wycli.cfg.*;
+import wycli.commands.Help;
 import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Plugin;
@@ -49,6 +50,10 @@ public class Main implements Command.Environment {
 	 * Path to the dependency repository within the global root.
 	 */
 	public static final Path.ID DEFAULT_REPOSITORY_PATH = Trie.fromString("repository");
+
+	public static final Command.Descriptor[] DEFAULT_COMMANDS = {
+			Help.DESCRIPTOR, wycli.commands.Build.DESCRIPTOR
+	};
 
 	// ========================================================================
 	// Instance Fields
@@ -132,6 +137,7 @@ public class Main implements Command.Environment {
 
 	public void setLogger(Logger logger) {
 		this.logger = logger;
+		this.env.setLogger(logger);
 	}
 
 	public void setMeter(Build.Meter meter) {
@@ -143,28 +149,25 @@ public class Main implements Command.Environment {
 	// ==================================================================
 
 	public static void main(String[] args) throws Exception {
-		Logger logger = Logger.NULL;
-		Build.Meter meter = Build.NULL_METER;
+		int exitCode;
+		// Construct environment and determine path
+		Pair<Main,Path.ID> mp = constructMainEnvironment(BOOT_LOGGER);
+		Main env = mp.first();
+		Path.ID path = mp.second();
+		// Add default descriptors
+		env.getCommandDescriptors().addAll(Arrays.asList(DEFAULT_COMMANDS));
 		// Construct environment and execute arguments
-		Command.Descriptor descriptor = wycli.commands.Root.DESCRIPTOR;
+		Command.Descriptor descriptor = wycli.commands.Root.DESCRIPTOR(env.getCommandDescriptors());
 		// Parse the given command-line
 		Command.Template template = new CommandParser(descriptor).parse(args);
 		// Apply verbose setting
 		boolean verbose = template.getOptions().get("verbose", Boolean.class);
 		int profile = template.getOptions().get("profile", Integer.class);
 		if(verbose || profile > 0) {
-			logger = new Logger.Default(System.err);
-			meter = new Meter("Build",logger,profile);
+			// Configure environment
+			env.setLogger(BOOT_LOGGER);
+			env.setMeter(new Meter("Build", BOOT_LOGGER, profile));
 		}
-		// Construct environment and determine path
-		Pair<Main,Path.ID> mp = constructMainEnvironment(logger);
-		Main env = mp.first();
-		Path.ID path = mp.second();
-		// Configure environment
-		env.setLogger(logger);
-		env.setMeter(meter);
-		//
-		int exitCode;
 		// Done
 		try {
 			// Create command instance
@@ -361,6 +364,11 @@ public class Main implements Command.Environment {
 	 */
 	public static Content.Registry BOOT_REGISTRY = new DefaultContentRegistry()
 			.register(ConfigFile.ContentType, "toml").register(ZipFile.ContentType, "zip");
+
+	/**
+	 * Simple default logger
+	 */
+	public static Logger BOOT_LOGGER = new Logger.Default(System.err);
 
 	/**
 	 * Attempt to read a configuration file from a given root.

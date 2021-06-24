@@ -165,6 +165,10 @@ public interface Plugin {
 			return platforms;
 		}
 
+		public void setLogger(Logger logger) {
+			this.logger = logger;
+		}
+
 		/**
 		 * Activate a new plugin within the system.
 		 *
