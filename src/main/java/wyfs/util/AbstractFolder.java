@@ -20,13 +20,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-import wybs.lang.Build;
+import wycc.lang.Path;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 import wyfs.lang.Content.Filter;
 import wyfs.lang.Content.Type;
-import wyfs.lang.Path.Entry;
-import wyfs.lang.Path.ID;
+import wyfs.lang.FileSystem;
 
 /**
  * An abstract folder contains other folders, and path entries. As such, it
@@ -37,9 +35,9 @@ import wyfs.lang.Path.ID;
  * @author David J. Pearce
  *
  */
-public abstract class AbstractFolder implements Path.Folder {
-	protected final Path.ID id;
-	private Path.Item[] contents;
+public abstract class AbstractFolder implements FileSystem.Folder {
+	protected final Path id;
+	private FileSystem.Item[] contents;
 	private int nentries;
 
 	/**
@@ -48,20 +46,20 @@ public abstract class AbstractFolder implements Path.Folder {
 	 *
 	 * @param id
 	 */
-	public AbstractFolder(Path.ID id) {
+	public AbstractFolder(Path id) {
 		this.id = id;
 	}
 
 	@Override
-	public Path.ID id() {
+	public Path id() {
 		return id;
 	}
 
 	@Override
-	public boolean contains(Path.Entry<?> e) throws IOException {
+	public boolean contains(FileSystem.Entry<?> e) throws IOException {
 		updateContents();
 		//
-		Path.ID eid = e.id();
+		Path eid = e.id();
 
 		int idx = binarySearch(contents, nentries, eid);
 		if (idx >= 0) {
@@ -69,12 +67,12 @@ public abstract class AbstractFolder implements Path.Folder {
 			// However, there maybe multiple matching IDs (e.g. with different
 			// content types). Therefore, we need to check them all to see if
 			// they match the requested entry.
-			Path.Item item = contents[idx];
+			FileSystem.Item item = contents[idx];
 			do {
 				if (item == e) {
 					return true;
-				} else if (item instanceof Path.Folder && eid.size() > id.size()) {
-					Path.Folder folder = (Path.Folder) item;
+				} else if (item instanceof FileSystem.Folder && eid.size() > id.size()) {
+					FileSystem.Folder folder = (FileSystem.Folder) item;
 					return folder.contains(e);
 				}
 			} while (++idx < nentries && (item = contents[idx]).id().equals(eid));
@@ -85,12 +83,12 @@ public abstract class AbstractFolder implements Path.Folder {
 	}
 
 	@Override
-	public boolean exists(ID id, Content.Type<?> ct) throws IOException {
+	public boolean exists(Path id, Content.Type<?> ct) throws IOException {
 		return get(id, ct) != null;
 	}
 
 	@Override
-	public <T> Path.Entry<T> get(ID eid, Content.Type<T> ct) throws IOException {
+	public <T> FileSystem.Entry<T> get(Path eid, Content.Type<T> ct) throws IOException {
 		updateContents();
 		final int id_size = id().size();
 		//
@@ -100,20 +98,20 @@ public abstract class AbstractFolder implements Path.Folder {
 			// However, there maybe multiple matching IDs with different
 			// content types. Therefore, we need to check them all to see if
 			// they match the requested entry.
-			Path.Item item = contents[idx];
+			FileSystem.Item item = contents[idx];
 			do {
-				if (item instanceof Entry && eid.equals(item.id())) {
+				if (item instanceof FileSystem.Entry && eid.equals(item.id())) {
 					// In this case, we're looking for and have found an exact
 					// item.
-					Entry entry = (Entry) item;
+					FileSystem.Entry entry = (FileSystem.Entry) item;
 					if (entry.contentType() == ct) {
 						return entry;
 					}
-				} else if (item instanceof Path.Folder && eid.size() > id_size) {
+				} else if (item instanceof FileSystem.Folder && eid.size() > id_size) {
 					// In this case, the ID is indicates the item is not
 					// contained in this folder.
-					Path.Folder folder = (Path.Folder) item;
-					Path.Entry<T> entry = folder.get(eid, ct);
+					FileSystem.Folder folder = (FileSystem.Folder) item;
+					FileSystem.Entry<T> entry = folder.get(eid, ct);
 					if(entry != null) {
 						return entry;
 					}
@@ -126,7 +124,7 @@ public abstract class AbstractFolder implements Path.Folder {
 	}
 
 	@Override
-	public List<Entry<?>> getAll() throws IOException {
+	public List<FileSystem.Entry<?>> getAll() throws IOException {
 		updateContents();
 		ArrayList entries = new ArrayList();
 
@@ -135,12 +133,12 @@ public abstract class AbstractFolder implements Path.Folder {
 		// given Java's generic type system.
 
 		for (int i = 0; i != nentries; ++i) {
-			Path.Item item = contents[i];
-			if (item instanceof Entry) {
-				Entry entry = (Entry) item;
+			FileSystem.Item item = contents[i];
+			if (item instanceof FileSystem.Entry) {
+				FileSystem.Entry entry = (FileSystem.Entry) item;
 				entries.add(entry);
-			} else if (item instanceof Path.Folder) {
-				Path.Folder folder = (Path.Folder) item;
+			} else if (item instanceof FileSystem.Folder) {
+				FileSystem.Folder folder = (FileSystem.Folder) item;
 				entries.addAll(folder.getAll());
 			}
 		}
@@ -149,42 +147,42 @@ public abstract class AbstractFolder implements Path.Folder {
 	}
 
 	@Override
-	public <T> void getAll(Content.Filter<T> filter, List<Entry<T>> entries) throws IOException {
+	public <T> void getAll(Content.Filter<T> filter, List<FileSystem.Entry<T>> entries) throws IOException {
 		updateContents();
 		// It would be nice to further optimise this loop. The key issue is that,
 		// at some point, we might know the filter could never match. In which
 		// case, we want to stop the recursion early, rather than exploring a
 		// potentially largel subtree.
 		for (int i = 0; i != nentries; ++i) {
-			Path.Item item = contents[i];
-			if (item instanceof Entry) {
-				Entry entry = (Entry) item;
+			FileSystem.Item item = contents[i];
+			if (item instanceof FileSystem.Entry) {
+				FileSystem.Entry entry = (FileSystem.Entry) item;
 				if (filter.matches(entry.id(), entry.contentType())) {
 					entries.add(entry);
 				}
-			} else if (item instanceof Path.Folder && filter.matchesSubpath(item.id())) {
-				Path.Folder folder = (Path.Folder) item;
+			} else if (item instanceof FileSystem.Folder && filter.matchesSubpath(item.id())) {
+				FileSystem.Folder folder = (FileSystem.Folder) item;
 				folder.getAll(filter, entries);
 			}
 		}
 	}
 
 	@Override
-	public <T> void getAll(Content.Filter<T> filter, Set<Path.ID> entries) throws IOException {
+	public <T> void getAll(Content.Filter<T> filter, Set<Path> entries) throws IOException {
 		updateContents();
 		// It would be nice to further optimise this loop. The key issue is that,
 		// at some point, we might know the filter could never match. In which
 		// case, we want to stop the recursion early, rather than exploring a
 		// potentially largel subtree.
 		for (int i = 0; i != nentries; ++i) {
-			Path.Item item = contents[i];
-			if (item instanceof Entry) {
-				Entry entry = (Entry) item;
+			FileSystem.Item item = contents[i];
+			if (item instanceof FileSystem.Entry) {
+				FileSystem.Entry entry = (FileSystem.Entry) item;
 				if (filter.matches(entry.id(), entry.contentType())) {
 					entries.add(entry.id());
 				}
-			} else if (item instanceof Path.Folder && filter.matchesSubpath(item.id())) {
-				Path.Folder folder = (Path.Folder) item;
+			} else if (item instanceof FileSystem.Folder && filter.matchesSubpath(item.id())) {
+				FileSystem.Folder folder = (FileSystem.Folder) item;
 				folder.getAll(filter, entries);
 			}
 		}
@@ -194,15 +192,15 @@ public abstract class AbstractFolder implements Path.Folder {
 	public void refresh() throws IOException {
 		if(contents != null) {
 			// Extract contents
-			Path.Item[] items = contents();
+			FileSystem.Item[] items = contents();
 			// Sort them
 			Arrays.sort(items, entryComparator);
 			// Proceed to update contents
 			int oj = 0;
 			int ni = 0;
 			while(oj < nentries && ni < items.length) {
-				Path.Item o = contents[oj];
-				Path.Item n = items[ni];
+				FileSystem.Item o = contents[oj];
+				FileSystem.Item n = items[ni];
 				int cmp = o.id().compareTo(n.id());
 				if (cmp > 0) {
 					// Old item after new item. This indicates a previously unseen item. Therefore,
@@ -239,7 +237,7 @@ public abstract class AbstractFolder implements Path.Folder {
 	}
 
 	@Override
-	public boolean remove(ID id, Type<?> ct) throws IOException {
+	public boolean remove(Path id, Type<?> ct) throws IOException {
 		updateContents();
 		// Find start of matches
 		int index = binarySearch(contents, nentries, id);
@@ -266,16 +264,16 @@ public abstract class AbstractFolder implements Path.Folder {
 		//
 		for (int i = 0; i != nentries; ++i) {
 			//
-			Path.Item item = contents[i];
+			FileSystem.Item item = contents[i];
 			//
-			if (item instanceof Entry) {
-				Entry entry = (Entry) item;
+			if (item instanceof FileSystem.Entry) {
+				FileSystem.Entry entry = (FileSystem.Entry) item;
 				if (filter.matches(entry.id(), entry.contentType()) && remove(entry.id(), entry.contentType())) {
 					count = count + 1;
 					i = i - 1;
 				}
-			} else if (item instanceof Path.Folder && filter.matchesSubpath(item.id())) {
-				Path.Folder folder = (Path.Folder) item;
+			} else if (item instanceof FileSystem.Folder && filter.matchesSubpath(item.id())) {
+				FileSystem.Folder folder = (FileSystem.Folder) item;
 				count += folder.remove(filter);
 			}
 		}
@@ -283,9 +281,9 @@ public abstract class AbstractFolder implements Path.Folder {
 		return count;
 	}
 
-	protected Path.Folder getFolder(String name) throws IOException {
+	protected FileSystem.Folder getFolder(String name) throws IOException {
 		updateContents();
-		ID tid = id.append(name);
+		Path tid = id.append(name);
 
 		int idx = binarySearch(contents, nentries, tid);
 		if (idx >= 0) {
@@ -293,12 +291,12 @@ public abstract class AbstractFolder implements Path.Folder {
 			// However, there maybe multiple matching IDs with different
 			// content types. Therefore, we need to check them all to see if
 			// they match the requested entry.
-			Path.Item item = contents[idx];
+			FileSystem.Item item = contents[idx];
 			do {
-				if (item instanceof Path.Folder) {
+				if (item instanceof FileSystem.Folder) {
 					// In this case, the ID is indicates the item is not
 					// contained in this folder.
-					return (Path.Folder) item;
+					return (FileSystem.Folder) item;
 				}
 			} while (++idx < nentries && (item = contents[idx]).id().equals(tid));
 		}
@@ -313,14 +311,14 @@ public abstract class AbstractFolder implements Path.Folder {
 	 *
 	 * @param item
 	 */
-	protected void insert(Path.Item item) throws IOException {
+	protected void insert(FileSystem.Item item) throws IOException {
 		if (item.id().parent() != id) {
 			throw new IllegalArgumentException(
-					"Cannot insert with incorrect Path.Item (" + item.id() + ") into AbstractFolder (" + id + ")");
+					"Cannot insert with incorrect FileSystem.Item (" + item.id() + ") into AbstractFolder (" + id + ")");
 		}
 		updateContents();
 		//
-		Path.ID id = item.id();
+		Path id = item.id();
 		int index = binarySearch(contents, nentries, id);
 
 		if (index < 0) {
@@ -332,13 +330,13 @@ public abstract class AbstractFolder implements Path.Folder {
 		insert(index,item);
 	}
 
-	private void insert(int index, Path.Item item) {
+	private void insert(int index, FileSystem.Item item) {
 		// Check whether sufficient space remaining
 		if ((nentries + 1) < contents.length) {
 			// Yes, move all items up the index
 			System.arraycopy(contents, index, contents, index + 1, nentries - index);
 		} else {
-			Path.Item[] tmp = new Path.Item[(nentries + 1) * 2];
+			FileSystem.Item[] tmp = new FileSystem.Item[(nentries + 1) * 2];
 			System.arraycopy(contents, 0, tmp, 0, index);
 			System.arraycopy(contents, index, tmp, index + 1, nentries - index);
 			contents = tmp;
@@ -351,9 +349,9 @@ public abstract class AbstractFolder implements Path.Folder {
 	/**
 	 * Extract all entries from the given folder.
 	 */
-	protected abstract Path.Item[] contents() throws IOException;
+	protected abstract FileSystem.Item[] contents() throws IOException;
 
-	private static final int binarySearch(final Path.Item[] children, int nchildren, final Path.ID key) {
+	private static final int binarySearch(final FileSystem.Item[] children, int nchildren, final Path key) {
 		int low = 0;
 		int high = nchildren - 1;
 
@@ -384,12 +382,12 @@ public abstract class AbstractFolder implements Path.Folder {
 		}
 	}
 
-	private int match(int start, final Path.Item[] children, int nchildren, final Path.ID key,
-			final Content.Type type) {
+	private int match(int start, final FileSystem.Item[] children, int nchildren, final Path key,
+					  final Content.Type type) {
 		while (contents[start].id().equals(key)) {
-			Path.Item item = contents[start];
-			if (item instanceof Path.Entry) {
-				Path.Entry entry = (Path.Entry) item;
+			FileSystem.Item item = contents[start];
+			if (item instanceof FileSystem.Entry) {
+				FileSystem.Entry entry = (FileSystem.Entry) item;
 				if (entry.contentType().equals(type)) {
 					return start;
 				}
@@ -399,9 +397,9 @@ public abstract class AbstractFolder implements Path.Folder {
 		return -1;
 	}
 
-	private static final Comparator<Path.Item> entryComparator = new Comparator<Path.Item>() {
+	private static final Comparator<FileSystem.Item> entryComparator = new Comparator<FileSystem.Item>() {
 		@Override
-		public int compare(Path.Item e1, Path.Item e2) {
+		public int compare(FileSystem.Item e1, FileSystem.Item e2) {
 			return e1.id().compareTo(e2.id());
 		}
 	};

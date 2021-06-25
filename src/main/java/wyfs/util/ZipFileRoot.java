@@ -15,8 +15,9 @@ package wyfs.util;
 
 import java.io.*;
 
-import wybs.lang.Path;
+import wycc.lang.Path;
 import wyfs.lang.Content;
+import wyfs.lang.FileSystem;
 
 /**
  * Provides an implementation of <code>Path.Root</code> for representing the
@@ -25,18 +26,18 @@ import wyfs.lang.Content;
  * @author David J. Pearce
  *
  */
-public final class ZipFileRoot extends AbstractRoot<ZipFileRoot.Folder> implements wyfs.lang.Path.Root {
-	private final wyfs.lang.Path.Entry<ZipFile> entry;
-	private wyfs.lang.Path.Item[] contents;
+public final class ZipFileRoot extends AbstractRoot<ZipFileRoot.Folder> implements FileSystem.Root {
+	private final FileSystem.Entry<ZipFile> entry;
+	private FileSystem.Item[] contents;
 
-	public ZipFileRoot(wyfs.lang.Path.Entry<ZipFile> entry, Content.Registry contentTypes) throws IOException {
+	public ZipFileRoot(FileSystem.Entry<ZipFile> entry, Content.Registry contentTypes) throws IOException {
 		super(contentTypes);
 		this.entry = entry;
 		refresh();
 	}
 
 	@Override
-	public <T> wyfs.lang.Path.Entry<T> create(wyfs.lang.Path.ID id, Content.Type<T> ct) throws IOException {
+	public <T> FileSystem.Entry<T> create(Path id, Content.Type<T> ct) throws IOException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -50,7 +51,7 @@ public final class ZipFileRoot extends AbstractRoot<ZipFileRoot.Folder> implemen
 		// Reread the contents of the zip file
 		ZipFile file = entry.read();
 		// Create new array of contents
-		this.contents = new wyfs.lang.Path.Item[file.size()];
+		this.contents = new FileSystem.Item[file.size()];
 		// Extract all items from the ZipFile
 		for (int i = 0; i != file.size(); ++i) {
 			ZipFile.Entry e = file.get(i);
@@ -63,7 +64,6 @@ public final class ZipFileRoot extends AbstractRoot<ZipFileRoot.Folder> implemen
 				// String suffix = lastDot >= 0 ? filename.substring(lastDot + 1) : null;
 				Path id = pkg.append(name);
 				Entry<?> pe = new Entry<>(id, e);
-				contentTypes.associate(pe);
 				contents[i] = pe;
 			} else {
 				// folder
@@ -89,26 +89,26 @@ public final class ZipFileRoot extends AbstractRoot<ZipFileRoot.Folder> implemen
 	 *
 	 */
 	public final class Folder extends AbstractFolder {
-		public Folder(wyfs.lang.Path.ID id) {
+		public Folder(Path id) {
 			super(id);
 		}
 
 		@Override
-		protected wyfs.lang.Path.Item[] contents() throws IOException {
+		protected FileSystem.Item[] contents() throws IOException {
 			// This algorithm is straightforward. I use a two loops instead of a
 			// single loop with ArrayList to avoid allocating on the heap.
 			int count = 0 ;
 			for(int i=0;i!=contents.length;++i) {
-				wyfs.lang.Path.Item item = contents[i];
+				FileSystem.Item item = contents[i];
 				if(item.id().parent() == id) {
 					count++;
 				}
 			}
 
-			wyfs.lang.Path.Item[] myContents = new wyfs.lang.Path.Item[count];
+			FileSystem.Item[] myContents = new FileSystem.Item[count];
 			count=0;
 			for(int i=0;i!=contents.length;++i) {
-				wyfs.lang.Path.Item item = contents[i];
+				FileSystem.Item item = contents[i];
 				if(item.id().parent() == id) {
 					myContents[count++] = item;
 				}
@@ -118,12 +118,12 @@ public final class ZipFileRoot extends AbstractRoot<ZipFileRoot.Folder> implemen
 		}
 
 		@Override
-		public <T> wyfs.lang.Path.Entry<T> create(wyfs.lang.Path.ID id, Content.Type<T> ct) {
+		public <T> FileSystem.Entry<T> create(Path id, Content.Type<T> ct) {
 			throw new UnsupportedOperationException();
 		}
 	}
 
-	private static final class Entry<T> extends AbstractEntry<T> implements wyfs.lang.Path.Entry<T> {
+	private static final class Entry<T> extends AbstractEntry<T> implements FileSystem.Entry<T> {
 		private final ZipFile.Entry entry;
 
 		public Entry(Path mid, ZipFile.Entry entry) {

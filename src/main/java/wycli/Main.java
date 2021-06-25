@@ -30,6 +30,7 @@ import wycli.lang.Package;
 import wycli.lang.Plugin;
 import wycli.util.CommandParser;
 import wyfs.lang.Content;
+import wyfs.lang.FileSystem;
 import wyfs.util.DefaultContentRegistry;
 import wycc.util.Pair;
 import wycc.lang.Path;
@@ -48,7 +49,7 @@ public class Main implements Command.Environment {
 	/**
 	 * Path to the dependency repository within the global root.
 	 */
-	public static final wyfs.lang.Path.ID DEFAULT_REPOSITORY_PATH = Path.fromString("repository");
+	public static final FileSystem.ID DEFAULT_REPOSITORY_PATH = Path.fromString("repository");
 
 	public static final Command.Descriptor[] DEFAULT_COMMANDS = {
 			Help.DESCRIPTOR, wycli.commands.Build.DESCRIPTOR
@@ -120,7 +121,7 @@ public class Main implements Command.Environment {
 	}
 
 	@Override
-	public Configuration get(wyfs.lang.Path.ID path) {
+	public Configuration get(FileSystem.ID path) {
 		return null;
 	}
 
@@ -150,9 +151,9 @@ public class Main implements Command.Environment {
 	public static void main(String[] args) throws Exception {
 		int exitCode;
 		// Construct environment and determine path
-		Pair<Main, wyfs.lang.Path.ID> mp = constructMainEnvironment(BOOT_LOGGER);
+		Pair<Main, FileSystem.ID> mp = constructMainEnvironment(BOOT_LOGGER);
 		Main env = mp.first();
-		wyfs.lang.Path.ID path = mp.second();
+		FileSystem.ID path = mp.second();
 		// Add default descriptors
 		env.getCommandDescriptors().addAll(Arrays.asList(DEFAULT_COMMANDS));
 		// Construct environment and execute arguments
@@ -201,7 +202,7 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<Main, wyfs.lang.Path.ID> constructMainEnvironment(Logger logger) throws IOException {
+	private static Pair<Main, FileSystem.ID> constructMainEnvironment(Logger logger) throws IOException {
 		// Determine system-wide directory
 		FileRepository systemRoot = determineSystemRoot();
 		// Determine user-wide directory
@@ -211,9 +212,9 @@ public class Main implements Command.Environment {
 		// Construct plugin environment and activate plugins
 		Plugin.Environment env = activatePlugins(system, logger);
 		// Determine top-level directory and relative path
-		Pair<File, wyfs.lang.Path.ID> lrp = determineLocalRootDirectory();
+		Pair<File, FileSystem.ID> lrp = determineLocalRootDirectory();
 		File localDir = lrp.first();
-		wyfs.lang.Path.ID pid = lrp.second();
+		FileSystem.ID pid = lrp.second();
 		// Construct build directory
 		File buildDir = determineBuildDirectory(localDir, logger);
 		// Construct local root
@@ -287,7 +288,7 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<File, wyfs.lang.Path.ID> determineLocalRootDirectory() throws IOException {
+	private static Pair<File, FileSystem.ID> determineLocalRootDirectory() throws IOException {
 		// Search for inner configuration.
 		File inner = findConfigFile(new File("."));
 		if (inner == null) {
@@ -318,9 +319,9 @@ public class Main implements Command.Environment {
 	private static Plugin.Environment activatePlugins(Configuration global, Logger logger) {
 		Plugin.Environment env = new Plugin.Environment(logger);
 		// Determine the set of install plugins
-		List<wyfs.lang.Path.ID> plugins = global.matchAll(Path.fromString("plugins/*"));
+		List<FileSystem.ID> plugins = global.matchAll(Path.fromString("plugins/*"));
 		// start modules
-		for (wyfs.lang.Path.ID id : plugins) {
+		for (FileSystem.ID id : plugins) {
 			String activator = id.toString();
 			Value.Bool enabled = global.get(Value.Bool.class, id);
 			// Only activate if enabled
@@ -377,7 +378,7 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(FileRepository root, wyfs.lang.Path.ID id, Logger logger, Configuration.Schema... schemas) throws IOException {
+	public static Configuration readConfigFile(FileRepository root, FileSystem.ID id, Logger logger, Configuration.Schema... schemas) throws IOException {
 		// Combine schemas together
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
 		try {

@@ -24,8 +24,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import wycc.lang.Path;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 
 /**
  * A shim for handling ZipFiles in a uniform fashion within the Whiley File
@@ -37,20 +37,14 @@ import wyfs.lang.Path;
 public class ZipFile {
 
 	public static Content.Type<ZipFile> ContentType = new Content.Type<ZipFile>() {
-
 		@Override
 		public String getSuffix() {
 			return "zip";
 		}
 
 		@Override
-		public ZipFile read(Path.Entry<ZipFile> e, InputStream input) throws IOException {
-			return new ZipFile(e.inputStream());
-		}
-
-		@Override
-		public ZipFile read(Path.ID id, InputStream input) throws IOException {
-			throw new UnsupportedOperationException();
+		public ZipFile read(Path id, InputStream input) throws IOException {
+			return new ZipFile(input);
 		}
 
 		@Override
@@ -64,7 +58,6 @@ public class ZipFile {
 			}
 			zout.finish();
 		}
-
 	};
 
 	/**

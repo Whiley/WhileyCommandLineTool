@@ -19,10 +19,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import wycc.lang.Path;
 import wycc.util.AbstractCompilationUnit.Value;
-import wyfs.lang.Path;
-import wyfs.lang.Path.Filter;
-import wyfs.lang.Path.ID;
 
 /**
  * A configuration provides a generic key-value store for which the backing is
@@ -47,14 +45,14 @@ public interface Configuration {
 	 * @param key
 	 * @return
 	 */
-	public <T> boolean hasKey(Path.ID key);
+	public <T> boolean hasKey(Path key);
 
 	/**
 	 * Get the value associated with a given key. If no such key exists, an
 	 * exception is raised. Every value returned is valid with respect to the
 	 * schema.
 	 */
-	public <T> T get(Class<T> kind, Path.ID key);
+	public <T> T get(Class<T> kind, Path key);
 
 	/**
 	 * Associate a given value with a given key in the configuration. This will
@@ -64,7 +62,7 @@ public interface Configuration {
 	 * @param key
 	 * @param value
 	 */
-	public <T> void write(Path.ID key, T value);
+	public <T> void write(Path key, T value);
 
 	/**
 	 * Determine all matching keys in this configuration.
@@ -72,7 +70,7 @@ public interface Configuration {
 	 * @param filter
 	 * @return
 	 */
-	public List<Path.ID> matchAll(Path.Filter filter);
+	public List<Path> matchAll(Path.Filter filter);
 
 	/**
 	 * Determines what values are permitted and required for this configuration.
@@ -87,7 +85,7 @@ public interface Configuration {
 		 * @param key
 		 * @return
 		 */
-		public boolean isKey(Path.ID key);
+		public boolean isKey(Path key);
 
 		/**
 		 * Get the descriptor associated with a given key.
@@ -95,7 +93,7 @@ public interface Configuration {
 		 * @param key
 		 * @return
 		 */
-		public KeyValueDescriptor<?> getDescriptor(Path.ID key);
+		public KeyValueDescriptor<?> getDescriptor(Path key);
 
 		/**
 		 * Get the list of all descriptors in this schema.
@@ -129,7 +127,7 @@ public interface Configuration {
 			}
 
 			@Override
-			public <T> T get(Class<T> kind, ID key) {
+			public <T> T get(Class<T> kind, Path key) {
 				Configuration.KeyValueDescriptor<?> descriptor = schema.getDescriptor(key);
 				if(descriptor != null && descriptor.hasDefault()) {
 					Object value = descriptor.getDefault();
@@ -143,19 +141,19 @@ public interface Configuration {
 			}
 
 			@Override
-			public <T> void write(ID key, T value) {
+			public <T> void write(Path key, T value) {
 				throw new IllegalArgumentException("invalid key access: " + key);
 			}
 
 			@Override
-			public List<ID> matchAll(Filter filter) {
+			public List<Path> matchAll(Path.Filter filter) {
 				// FIXME: need really to implement this method somehow!
 
 				return Collections.EMPTY_LIST;
 			}
 
 			@Override
-			public <T> boolean hasKey(ID key) {
+			public <T> boolean hasKey(Path key) {
 				Configuration.KeyValueDescriptor<?> descriptor = schema.getDescriptor(key);
 				return descriptor != null && descriptor.hasDefault();
 			}
@@ -168,12 +166,12 @@ public interface Configuration {
 	public static final Configuration.Schema EMPTY_SCHEMA = new Configuration.Schema() {
 
 		@Override
-		public boolean isKey(ID key) {
+		public boolean isKey(Path key) {
 			return false;
 		}
 
 		@Override
-		public KeyValueDescriptor<?> getDescriptor(ID key) {
+		public KeyValueDescriptor<?> getDescriptor(Path key) {
 			throw new IllegalArgumentException("invalid key: " + key);
 		}
 
@@ -195,7 +193,7 @@ public interface Configuration {
 		return new Schema() {
 
 			@Override
-			public boolean isKey(ID key) {
+			public boolean isKey(Path key) {
 				for (int i = 0; i != schemas.length; ++i) {
 					if (schemas[i].isKey(key)) {
 						return true;
@@ -205,7 +203,7 @@ public interface Configuration {
 			}
 
 			@Override
-			public KeyValueDescriptor<?> getDescriptor(ID key) {
+			public KeyValueDescriptor<?> getDescriptor(Path key) {
 				for (int i = 0; i != schemas.length; ++i) {
 					Schema schema = schemas[i];
 					//
@@ -242,7 +240,7 @@ public interface Configuration {
 		return new Schema() {
 
 			@Override
-			public KeyValueDescriptor<?> getDescriptor(Path.ID key) {
+			public KeyValueDescriptor<?> getDescriptor(Path key) {
 				for (int i = 0; i != descriptors.length; ++i) {
 					KeyValueDescriptor<?> descriptor = descriptors[i];
 					if (descriptor.getFilter().matches(key)) {
@@ -253,7 +251,7 @@ public interface Configuration {
 			}
 
 			@Override
-			public boolean isKey(ID key) {
+			public boolean isKey(Path key) {
 				for (int i = 0; i != descriptors.length; ++i) {
 					KeyValueDescriptor<?> descriptor = descriptors[i];
 					if (descriptor.getFilter().matches(key)) {

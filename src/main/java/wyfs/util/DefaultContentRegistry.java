@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 
 /**
  * Default implementation of a content registry. This associates a given set
@@ -38,15 +37,6 @@ public class DefaultContentRegistry implements Content.Registry {
 	public DefaultContentRegistry unregister(Content.Type contentType, String suffix) {
 		contentTypes.remove(suffix);
 		return this;
-	}
-
-	@Override
-	public void associate(Path.Entry e) {
-		String suffix = e.suffix();
-		Content.Type ct = contentTypes.get(suffix);
-		if (ct != null) {
-			e.associate(ct, null);
-		}
 	}
 
 	@Override

@@ -16,9 +16,9 @@ package wyfs.util;
 import java.io.*;
 import java.util.*;
 
-import wybs.lang.Path;
+import wycc.lang.Path;
 import wyfs.lang.Content;
-import wyfs.lang.Path.ID;
+import wyfs.lang.FileSystem;
 
 /**
  * Provides an implementation of <code>Path.Root</code> for representing a file
@@ -134,10 +134,10 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 	 *         corresponding entry in files, or is null (if there is no match).
 	 * @throws IOException
 	 */
-	public <T> List<wyfs.lang.Path.Entry<T>> find(List<File> files,
-												  Content.Type<T> contentType)
+	public <T> List<FileSystem.Entry<T>> find(List<File> files,
+											  Content.Type<T> contentType)
 			throws IOException {
-		ArrayList<wyfs.lang.Path.Entry<T>> sources = new ArrayList<>();
+		ArrayList<FileSystem.Entry<T>> sources = new ArrayList<>();
 		String suffix = "." + contentTypes.suffix(contentType);
 		String location = location().getCanonicalPath();
 
@@ -153,8 +153,8 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 				if (module.endsWith(suffix)) {
 					module = module.substring(0,
 							module.length() - suffix.length());
-					wyfs.lang.Path.ID mid = Path.fromString(module);
-					wyfs.lang.Path.Entry<T> entry = this.get(mid, contentType);
+					Path mid = Path.fromString(module);
+					FileSystem.Entry<T> entry = this.get(mid, contentType);
 					if (entry != null) {
 						sources.add(entry);
 						continue;
@@ -174,10 +174,10 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 	 * @author David J. Pearce
 	 *
 	 */
-	public static final class Entry<T> extends AbstractEntry<T> implements wyfs.lang.Path.Entry<T> {
+	public static final class Entry<T> extends AbstractEntry<T> implements FileSystem.Entry<T> {
 		private final java.io.File file;
 
-		public Entry(wyfs.lang.Path.ID id, java.io.File file) {
+		public Entry(Path id, java.io.File file) {
 			super(id);
 			this.file = file;
 		}
@@ -231,17 +231,17 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 	 *
 	 */
 	public final class Folder extends AbstractFolder {
-		public Folder(wyfs.lang.Path.ID id) {
+		public Folder(Path id) {
 			super(id);
 		}
 
 		@Override
-		protected wyfs.lang.Path.Item[] contents() throws IOException {
+		protected FileSystem.Item[] contents() throws IOException {
 			File myDir = new File(dir, id.toString().replace('/', File.separatorChar));
 
 			if (myDir.exists() && myDir.isDirectory()) {
 				File[] files = myDir.listFiles(filter);
-				wyfs.lang.Path.Item[] items = new wyfs.lang.Path.Item[files.length];
+				FileSystem.Item[] items = new FileSystem.Item[files.length];
 				int count = 0;
 				for(int i=0;i!=files.length;++i) {
 					File file = files[i];
@@ -252,9 +252,8 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 						int idx = filename.lastIndexOf('.');
 						if (idx > 0) {
 							String name = filename.substring(0, idx);
-							wyfs.lang.Path.ID oid = id.append(name);
+							Path oid = id.append(name);
 							Entry e = new Entry(oid, file);
-							contentTypes.associate(e);
 							items[count++] = e;
 						}
 					}
@@ -268,16 +267,16 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 					return items;
 				}
 			} else {
-				return new wyfs.lang.Path.Item[0];
+				return new FileSystem.Item[0];
 			}
 		}
 
 		@Override
-		public <T> wyfs.lang.Path.Entry<T> create(ID nid, Content.Type<T> ct)
+		public <T> FileSystem.Entry<T> create(Path nid, Content.Type<T> ct)
 				throws IOException {
 			if (nid.size() == id.size() + 1) {
 				// attempting to create an entry in this folder
-				wyfs.lang.Path.Entry<T> e = super.get(nid.subpath(0, 1), ct);
+				FileSystem.Entry<T> e = super.get(nid.subpath(0, 1), ct);
 				if (e == null) {
 					// Entry doesn't already exist, so create it
 					String physID = nid.toString().replace('/',
@@ -293,7 +292,7 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 			} else {
 				// attempting to create entry in subfolder.
 				String folderName = nid.get(id.size());
-				wyfs.lang.Path.Folder folder = getFolder(folderName);
+				FileSystem.Folder folder = getFolder(folderName);
 				if (folder == null) {
 					// Folder doesn't already exist, so create it.
 					folder = new Folder(id.append(folderName));
@@ -304,8 +303,8 @@ public class DirectoryRoot extends AbstractRoot<DirectoryRoot.Folder> {
 		}
 
 		@Override
-		public boolean remove(wyfs.lang.Path.ID id, Content.Type<?> type) throws IOException {
-			wyfs.lang.Path.Entry<?> entry = get(id, type);
+		public boolean remove(Path id, Content.Type<?> type) throws IOException {
+			FileSystem.Entry<?> entry = get(id, type);
 			//
 			if (entry != null) {
 				DirectoryRoot.Entry<?> e = (Entry<?>) entry;

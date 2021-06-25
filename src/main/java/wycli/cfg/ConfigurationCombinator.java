@@ -13,16 +13,10 @@
 // limitations under the License.
 package wycli.cfg;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import wycc.lang.Path;
 
-import wycli.cfg.Configuration.Schema;
-import wyfs.lang.Content;
-import wyfs.lang.Path;
-import wyfs.lang.Path.Filter;
-import wyfs.lang.Path.ID;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Combines one or more configurations into a single configuration. The
@@ -47,7 +41,7 @@ public class ConfigurationCombinator implements Configuration {
 	}
 
 	@Override
-	public boolean hasKey(ID key) {
+	public boolean hasKey(Path key) {
 		for(int i=0;i!=configurations.length;++i) {
 			if(configurations[i].hasKey(key)) {
 				return true;
@@ -57,8 +51,8 @@ public class ConfigurationCombinator implements Configuration {
 	}
 
 	@Override
-	public List<ID> matchAll(Filter filter) {
-		ArrayList<ID> results = new ArrayList<>();
+	public List<Path> matchAll(Path.Filter filter) {
+		ArrayList<Path> results = new ArrayList<>();
 		for(int i=0;i!=configurations.length;++i) {
 			results.addAll(configurations[i].matchAll(filter));
 		}
@@ -66,7 +60,7 @@ public class ConfigurationCombinator implements Configuration {
 	}
 
 	@Override
-	public <T> T get(Class<T> kind, ID key) {
+	public <T> T get(Class<T> kind, Path key) {
 		for (int i = 0; i != configurations.length; ++i) {
 			Configuration config = configurations[i];
 			if (config.getConfigurationSchema().isKey(key)) {
@@ -77,7 +71,7 @@ public class ConfigurationCombinator implements Configuration {
 	}
 
 	@Override
-	public <T> void write(ID key, T value) {
+	public <T> void write(Path key, T value) {
 		for (int i = 0; i != configurations.length; ++i) {
 			Configuration config = configurations[i];
 			if (config.getConfigurationSchema().isKey(key)) {

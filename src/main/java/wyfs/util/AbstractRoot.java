@@ -19,16 +19,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import wycc.lang.Path;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 import wyfs.lang.Content.Filter;
 import wyfs.lang.Content.Type;
-import wyfs.lang.Path.Entry;
-import wyfs.lang.Path.Folder;
-import wyfs.lang.Path.ID;
-import wyfs.lang.Path.RelativeRoot;
-import wyfs.lang.Path.Root;
-import wyfs.util.AbstractRoot.Relative;
+import wyfs.lang.FileSystem;
 
 /**
  * Provides a simple implementation of <code>Path.Root</code>. This maintains a
@@ -37,7 +32,7 @@ import wyfs.util.AbstractRoot.Relative;
  * @author David J. Pearce
  *
  */
-public abstract class AbstractRoot<T extends Folder> implements Root {
+public abstract class AbstractRoot<T extends FileSystem.Folder> implements FileSystem.Root {
 	protected final Content.Registry contentTypes;
 	protected final T root;
 
@@ -52,47 +47,47 @@ public abstract class AbstractRoot<T extends Folder> implements Root {
 	}
 
 	@Override
-	public boolean contains(Path.Entry<?> e) throws IOException {
+	public boolean contains(FileSystem.Entry<?> e) throws IOException {
 		return root.contains(e);
 	}
 
 	@Override
-	public boolean exists(ID id, Content.Type<?> ct) throws IOException{
+	public boolean exists(Path id, Content.Type<?> ct) throws IOException{
 		return root.exists(id,ct);
 	}
 
 	@Override
-	public <T> Path.Entry<T> get(ID id, Content.Type<T> ct) throws IOException{
-		Path.Entry<T> e = root.get(id,ct);
+	public <T> FileSystem.Entry<T> get(Path id, Content.Type<T> ct) throws IOException{
+		FileSystem.Entry<T> e = root.get(id,ct);
 		return e;
 	}
 
 	@Override
-	public <T> List<Entry<T>> get(Content.Filter<T> filter) throws IOException{
-		ArrayList<Entry<T>> entries = new ArrayList<>();
+	public <T> List<FileSystem.Entry<T>> get(Content.Filter<T> filter) throws IOException{
+		ArrayList<FileSystem.Entry<T>> entries = new ArrayList<>();
 		root.getAll(filter, entries);
 		return entries;
 	}
 
 	@Override
-	public <T> Set<Path.ID> match(Content.Filter<T> filter) throws IOException{
-		HashSet<Path.ID> ids = new HashSet<>();
+	public <T> Set<Path> match(Content.Filter<T> filter) throws IOException{
+		HashSet<Path> ids = new HashSet<>();
 		root.getAll(filter, ids);
 		return ids;
 	}
 
 	@Override
-	public <T> Path.Entry<T> create(Path.ID id, Content.Type<T> ct) throws IOException {
+	public <T> FileSystem.Entry<T> create(Path id, Content.Type<T> ct) throws IOException {
 		return root.create(id,ct);
 	}
 
 	@Override
-	public final RelativeRoot createRelativeRoot(ID id) throws IOException {
+	public final FileSystem.RelativeRoot createRelativeRoot(Path id) throws IOException {
 		return new Relative(this,id);
 	}
 
 	@Override
-	public boolean remove(ID id, Type<?> ct) throws IOException {
+	public boolean remove(Path id, Type<?> ct) throws IOException {
 		return root.remove(id,ct);
 	}
 
@@ -120,11 +115,11 @@ public abstract class AbstractRoot<T extends Folder> implements Root {
 	 */
 	protected abstract T root();
 
-	public final static class Relative implements Path.RelativeRoot {
-		private final Path.Root parent;
-		private final ID prefix;
+	public final static class Relative implements FileSystem.RelativeRoot {
+		private final FileSystem.Root parent;
+		private final Path prefix;
 
-		public Relative(Path.Root parent, ID prefix) throws IOException {
+		public Relative(FileSystem.Root parent, Path prefix) throws IOException {
 			if(prefix == null) {
 				throw new IllegalArgumentException("prefix cannot be null");
 			}
@@ -133,43 +128,43 @@ public abstract class AbstractRoot<T extends Folder> implements Root {
 		}
 
 		@Override
-		public Root getParent() {
+		public FileSystem.Root getParent() {
 			return parent;
 		}
 
 		@Override
-		public boolean contains(Path.Entry<?> entry) throws IOException {
+		public boolean contains(FileSystem.Entry<?> entry) throws IOException {
 			// FIXME: unsure whether this makes sense or not
 			return parent.contains(entry);
 		}
 
 		@Override
-		public boolean exists(ID id, Type<?> ct) throws IOException {
+		public boolean exists(Path id, Type<?> ct) throws IOException {
 			return parent.exists(prefix.append(id), ct);
 		}
 
 		@Override
-		public <T> Path.Entry<T> get(ID id, Type<T> ct) throws IOException {
+		public <T> FileSystem.Entry<T> get(Path id, Type<T> ct) throws IOException {
 			return parent.get(prefix.append(id),ct);
 		}
 
 		@Override
-		public <T> List<wyfs.lang.Path.Entry<T>> get(Filter<T> cf) throws IOException {
+		public <T> List<FileSystem.Entry<T>> get(Filter<T> cf) throws IOException {
 			return parent.get(new RelativeFilter<>(prefix, cf));
 		}
 
 		@Override
-		public <T> Set<ID> match(Filter<T> cf) throws IOException {
+		public <T> Set<Path> match(Filter<T> cf) throws IOException {
 			return parent.match(new RelativeFilter<>(prefix, cf));
 		}
 
 		@Override
-		public <T> wyfs.lang.Path.Entry<T> create(ID id, Type<T> ct) throws IOException {
+		public <T> FileSystem.Entry<T> create(Path id, Type<T> ct) throws IOException {
 			return parent.create(prefix.append(id), ct);
 		}
 
 		@Override
-		public boolean remove(ID id, Type<?> ct) throws IOException {
+		public boolean remove(Path id, Type<?> ct) throws IOException {
 			return parent.remove(prefix.append(id), ct);
 		}
 
@@ -179,7 +174,7 @@ public abstract class AbstractRoot<T extends Folder> implements Root {
 		}
 
 		@Override
-		public RelativeRoot createRelativeRoot(ID id) throws IOException {
+		public FileSystem.RelativeRoot createRelativeRoot(Path id) throws IOException {
 			return new Relative(parent,prefix.append(id));
 		}
 
@@ -200,10 +195,10 @@ public abstract class AbstractRoot<T extends Folder> implements Root {
 	}
 
 	private static final class RelativeFilter<T> implements Content.Filter<T> {
-		private final ID prefix;
+		private final Path prefix;
 		private final Content.Filter<T> filter;
 
-		public RelativeFilter(ID prefix, Content.Filter<T> filter) {
+		public RelativeFilter(Path prefix, Content.Filter<T> filter) {
 			if(prefix == null) {
 				throw new IllegalArgumentException("prefix cannot be null");
 			}
@@ -212,11 +207,11 @@ public abstract class AbstractRoot<T extends Folder> implements Root {
 		}
 
 		@Override
-		public boolean matches(ID id, Type<T> ct) {
+		public boolean matches(Path id, Type<T> ct) {
 			if (id.size() >= prefix.size()) {
-				Path.ID id_prefix = id.subpath(0, prefix.size());
+				Path id_prefix = id.subpath(0, prefix.size());
 				if (id_prefix.equals(prefix)) {
-					Path.ID id_suffix = id.subpath(prefix.size(), id.size());
+					Path id_suffix = id.subpath(prefix.size(), id.size());
 					return filter.matches(id_suffix,ct);
 				}
 			}
@@ -224,13 +219,13 @@ public abstract class AbstractRoot<T extends Folder> implements Root {
 		}
 
 		@Override
-		public boolean matchesSubpath(ID id) {
+		public boolean matchesSubpath(Path id) {
 			if (id.size() < prefix.size()) {
 				return prefix.subpath(0, id.size()).equals(id);
 			} else {
-				Path.ID id_prefix = id.subpath(0, prefix.size());
+				Path id_prefix = id.subpath(0, prefix.size());
 				if (id_prefix.equals(prefix)) {
-					Path.ID id_suffix = id.subpath(prefix.size(), id.size());
+					Path id_suffix = id.subpath(prefix.size(), id.size());
 					return filter.matchesSubpath(id_suffix);
 				}
 			}

@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
+import wycc.lang.Path;
 import wycc.lang.SyntacticHeap;
 import wycc.lang.SyntacticItem;
 import wycc.lang.SourceFile;
@@ -35,7 +36,6 @@ import wycc.util.AbstractCompilationUnit.Attribute.Span;
 import wycli.cfg.Configuration;
 import wycli.cfg.Configuration.Schema;
 import wycli.lang.Command;
-import wyfs.lang.Path;
 import wycc.util.Pair;
 
 public class Build implements Command {
@@ -121,7 +121,7 @@ public class Build implements Command {
 	}
 
 	@Override
-	public boolean execute(Path.ID path, Template template) throws Exception {
+	public boolean execute(Path path, Template template) throws Exception {
 		Repository repository = environment.getRepository();
 		List<wycc.lang.Build.Task> tasks = new ArrayList<>();
 		// Construct tasks

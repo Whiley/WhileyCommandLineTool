@@ -14,10 +14,10 @@
 package wyfs.util;
 
 import java.io.IOException;
-import java.util.*;
 
+import wycc.lang.Path;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
+import wyfs.lang.FileSystem;
 
 /**
  * Provides a simple implementation of <code>Path.Entry</code>. This caches
@@ -28,18 +28,18 @@ import wyfs.lang.Path;
  *
  * @param <T>
  */
-public abstract class AbstractEntry<T> implements Path.Entry<T> {
-	protected final Path.ID id;
+public abstract class AbstractEntry<T> implements FileSystem.Entry<T> {
+	protected final Path id;
 	protected Content.Type<T> contentType;
 	protected T contents = null;
 	protected boolean modified = false;
 
-	public AbstractEntry(Path.ID mid) {
+	public AbstractEntry(Path mid) {
 		this.id = mid;
 	}
 
 	@Override
-	public Path.ID id() {
+	public Path id() {
 		return id;
 	}
 
@@ -76,7 +76,7 @@ public abstract class AbstractEntry<T> implements Path.Entry<T> {
 	@Override
 	public T read() throws IOException {
 		if (contents == null) {
-			contents = contentType.read(this,inputStream());
+			contents = contentType.read(id, inputStream());
 		}
 		return contents;
 	}

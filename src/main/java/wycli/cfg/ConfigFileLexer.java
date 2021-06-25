@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import wycc.lang.SyntacticException;
-import wyfs.lang.Path;
 
 /**
  * Split a configuration file into a list of tokens. These tokens can then be fed into

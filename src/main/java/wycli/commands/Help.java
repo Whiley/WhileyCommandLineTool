@@ -25,7 +25,7 @@ import wycc.lang.Path;
 public class Help implements Command {
 
     public static final Configuration.Schema SCHEMA = Configuration
-            .fromArray(Configuration.BOUND_INTEGER(Path.fromString("width"), "fix display width", false, 0));
+            .fromArray(Configuration.BOUND_INTEGER(Path.fromFilterString("width"), "fix display width", false, 0));
 
     public static final List<Option.Descriptor> OPTIONS = Arrays
             .asList(Command.OPTION_NONNEGATIVE_INTEGER("width", "fix display width", 80));
@@ -87,7 +87,7 @@ public class Help implements Command {
     }
 
     @Override
-    public boolean execute(wyfs.lang.Path.ID path, Template template) throws Exception {
+    public boolean execute(Path path, Template template) throws Exception {
         // Extract arguments
         List<String> args = template.getArguments();
         //

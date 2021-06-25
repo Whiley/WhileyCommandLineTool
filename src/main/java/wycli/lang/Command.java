@@ -20,10 +20,10 @@ import java.util.function.Predicate;
 import wycc.lang.Build;
 import wycc.lang.Build.Repository;
 import wycc.lang.Build.Meter;
+import wycc.lang.Path;
 import wycc.util.Logger;
 import wycli.cfg.Configuration;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 
 /**
  * A command which can be executed (e.g. from the command-line)
@@ -57,7 +57,7 @@ public interface Command<S extends Build.SnapShot<S>> {
 	 * any calls are made to <code>finalise()</code>. Observer, however, that this
 	 * command may be executed multiple times.
 	 */
-	public boolean execute(Path.ID path, Template template) throws Exception;
+	public boolean execute(Path path, Template template) throws Exception;
 
 	/**
 	 * Defines an environment in which commands can be executed.
@@ -109,7 +109,7 @@ public interface Command<S extends Build.SnapShot<S>> {
 		 * @param path
 		 * @return
 		 */
-		public Configuration get(Path.ID path);
+		public Configuration get(Path path);
 
 		/**
 		 * Get the top-level meter for this environment.

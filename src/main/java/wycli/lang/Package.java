@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 
 import wycli.cfg.Configuration;
-import wyfs.lang.Path;
+import wyfs.lang.FileSystem;
 import wyfs.util.ZipFile;
 
 public interface Package {
@@ -38,7 +38,7 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		List<Path.Root> resolve(Configuration cf) throws IOException;
+		List<FileSystem.Root> resolve(Configuration cf) throws IOException;
 
 		/**
 		 * Get the root repository associated with this package resolver.
@@ -80,7 +80,7 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		public Path.Root get(String name, Semantic.Version version) throws IOException;
+		public FileSystem.Root get(String name, Semantic.Version version) throws IOException;
 
 		/**
 		 * Put a given package into this repository.

@@ -2,11 +2,8 @@ package wycli.commands;
 
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
-import wyfs.lang.Path;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**

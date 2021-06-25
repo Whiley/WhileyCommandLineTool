@@ -15,7 +15,6 @@ package wycli.lang;
 
 import wycc.util.Logger;
 import wyfs.lang.Content;
-import wyfs.lang.Path;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -205,11 +204,6 @@ public interface Plugin {
 		@Override
 		public void logTimedMessage(String msg, long time, long memory) {
 			logger.logTimedMessage(msg, time, memory);
-		}
-
-		@Override
-		public void associate(Path.Entry<?> e) {
-			throw new IllegalArgumentException("GOT HERE");
 		}
 
 		@Override

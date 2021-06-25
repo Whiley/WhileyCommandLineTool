@@ -27,7 +27,6 @@ import wycc.lang.SyntacticException;
 import wycc.util.AbstractCompilationUnit;
 import wycc.util.AbstractSyntacticItem;
 import wyfs.lang.Content;
-import wyfs.lang.Path.ID;
 import wycc.lang.Path;
 
 public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements Build.Artifact {
@@ -36,23 +35,8 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 	// =========================================================================
 
 	public static final Content.Type<ConfigFile> ContentType = new Content.Type<ConfigFile>() {
-		public wyfs.lang.Path.Entry<ConfigFile> accept(wyfs.lang.Path.Entry<?> e) {
-			if (e.contentType() == this) {
-				return (wyfs.lang.Path.Entry<ConfigFile>) e;
-			}
-			return null;
-		}
-
 		@Override
-		public ConfigFile read(wyfs.lang.Path.Entry<ConfigFile> e, InputStream inputstream) throws IOException {
-			wyfs.lang.Path.ID id = e == null ? null : e.id();
-			ConfigFileLexer lexer = new ConfigFileLexer(e.inputStream());
-			ConfigFileParser parser = new ConfigFileParser(id,lexer.scan());
-			return parser.read();
-		}
-
-		@Override
-		public ConfigFile read(ID id, InputStream input) throws IOException {
+		public ConfigFile read(Path id, InputStream input) throws IOException {
 			ConfigFileLexer lexer = new ConfigFileLexer(input);
 			ConfigFileParser parser = new ConfigFileParser(id,lexer.scan());
 			return parser.read();
@@ -86,43 +70,29 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 	// =========================================================================
 	// Constructors
 	// =========================================================================
-	private final wyfs.lang.Path.ID id;
+	private final Path id;
 	/**
 	 * The list of declarations which make up this configuration.
 	 */
 	private Tuple<Declaration> declarations;
 
-	public ConfigFile(wyfs.lang.Path.Entry<ConfigFile> entry) {
-		super(entry);
-		//
-		this.declarations = new Tuple<>();
-		this.id = entry.id();
-	}
-
-	public ConfigFile(wyfs.lang.Path.ID id) {
+	public ConfigFile(Path id) {
 		super(null);
 		//
 		this.declarations = new Tuple<>();
 		this.id = id;
 	}
 
-	public ConfigFile(wyfs.lang.Path.Entry<ConfigFile> entry, Tuple<Declaration> declarations) {
-		super(entry);
-		//
+	public ConfigFile(Path id, Tuple<Declaration> declarations) {
 		this.declarations = declarations;
 		//
 		allocate(declarations);
-		this.id = entry.id();
+		this.id = id;
 	}
 
 	@Override
-	public wyfs.lang.Path.ID getID() {
+	public Path getID() {
 		return id;
-	}
-
-	@Override
-	public Content.Type<ConfigFile> getContentType() {
-		return ContentType;
 	}
 
 	public static interface Declaration extends SyntacticItem {
@@ -208,7 +178,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		}
 	}
 
-	private KeyValuePair getKeyValuePair(ID key, Tuple<? extends Declaration> decls) {
+	private KeyValuePair getKeyValuePair(Path key, Tuple<? extends Declaration> decls) {
 		String table = key.parent().toString();
 		//
 		for(int i=0;i!=decls.size();++i) {
@@ -228,7 +198,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		return null;
 	}
 
-	private void insert(ID key, Object value, Tuple<Declaration> decls) {
+	private void insert(Path key, Object value, Tuple<Declaration> decls) {
 		throw new UnsupportedOperationException();
 		// FIXME: needs to be updated
 //		for(int i=0;i!=decls.size();++i) {
@@ -276,7 +246,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		}
 
 		@Override
-		public boolean hasKey(ID key) {
+		public boolean hasKey(Path key) {
 			// Find the key-value pair
 			KeyValuePair kvp = getKeyValuePair(key, declarations);
 			// If didn't find a value, still might have default
@@ -291,7 +261,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		}
 
 		@Override
-		public <T> T get(Class<T> kind, ID key) {
+		public <T> T get(Class<T> kind, Path key) {
 			// Get the descriptor for this key
 			Configuration.KeyValueDescriptor<?> descriptor = schema.getDescriptor(key);
 			// Find the key-value pair
@@ -311,15 +281,15 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 					// 	Convert into value
 					return (T) value;
 				} else {
-					throw new SyntacticException("hidden key access: " + key, getEntry(), null);
+					throw new SyntacticException("hidden key access: " + key, ConfigFile.this, null);
 				}
 			} else {
-				throw new SyntacticException("invalid key access: " + key, getEntry(), null);
+				throw new SyntacticException("invalid key access: " + key, ConfigFile.this, null);
 			}
 		}
 
 		@Override
-		public <T> void write(ID key, T value) {
+		public <T> void write(Path key, T value) {
 			// Get the descriptor for this key
 			Configuration.KeyValueDescriptor descriptor = schema.getDescriptor(key);
 			// Sanity check the expected kind
@@ -336,13 +306,13 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		}
 
 		@Override
-		public List<ID> matchAll(wyfs.lang.Path.Filter filter) {
-			ArrayList<ID> matches = new ArrayList<>();
+		public List<Path> matchAll(Path.Filter filter) {
+			ArrayList<Path> matches = new ArrayList<>();
 			match(Path.ROOT,filter,declarations,matches);
 			return matches;
 		}
 
-		private void match(Path id, wyfs.lang.Path.Filter filter, Tuple<? extends Declaration> declarations, ArrayList<ID> matches) {
+		private void match(Path id, Path.Filter filter, Tuple<? extends Declaration> declarations, ArrayList<Path> matches) {
 			for (int i = 0; i != declarations.size(); ++i) {
 				Declaration decl = declarations.get(i);
 				if (decl instanceof Table) {
@@ -367,30 +337,30 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 			List<KeyValueDescriptor<?>> descriptors = schema.getDescriptors();
 			// Matched holds all concrete key-value pairs which are matched. This allows us
 			// to identify any which were not matched and, hence, are invalid
-			Set<wyfs.lang.Path.ID> matched = new HashSet<>();
+			Set<Path> matched = new HashSet<>();
 			// Validate all descriptors against given values.
 			for (int i = 0; i != descriptors.size(); ++i) {
 				KeyValueDescriptor descriptor = descriptors.get(i);
 				// Sanity check the expected kind
 				Class<?> kind = descriptor.getType();
 				// Identify all matching keys
-				List<wyfs.lang.Path.ID> results = matchAll(descriptor.getFilter());
+				List<Path> results = matchAll(descriptor.getFilter());
 				// Sanity check whether required
 				if(results.size() == 0 && descriptor.isRequired()) {
-					throw new SyntacticException("missing key value: " + descriptor.getFilter(), getEntry(), null);
+					throw new SyntacticException("missing key value: " + descriptor.getFilter(), ConfigFile.this, null);
 				}
 				// Check all matching keys
-				for (wyfs.lang.Path.ID id : results) {
+				for (Path id : results) {
 					// Find corresponding key value pair.
 					KeyValuePair kvp = getKeyValuePair(id, declarations);
 					// NOTE: kvp != null
 					if (!kind.isInstance(kvp.getValue())) {
 						throw new SyntacticException(
 								"invalid key value (expected " + kind.getSimpleName() + ")",
-								getEntry(), kvp);
+								ConfigFile.this, kvp);
 					} else if (!descriptor.isValid(kvp.getValue())) {
 						// Identified invalid key-value pair
-						throw new SyntacticException("invalid key value", getEntry(), kvp);
+						throw new SyntacticException("invalid key value", ConfigFile.this, kvp);
 					}
 				}
 				// Remember every matched attribute
@@ -398,13 +368,13 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 			}
 			if(strict) {
 				// Check whether any unmatched key-valid pairs exist or not
-				List<wyfs.lang.Path.ID> all = matchAll(Path.fromString("**/*"));
+				List<Path> all = matchAll(Path.fromFilterString("**/*"));
 				for(int i=0;i!=all.size();++i) {
-					wyfs.lang.Path.ID id = all.get(i);
+					Path id = all.get(i);
 					if(!matched.contains(id)) {
 						// Found unmatched attribute
 						KeyValuePair kvp = getKeyValuePair(id, declarations);
-						throw new SyntacticException("invalid key: " + id, getEntry(), kvp.getKey());
+						throw new SyntacticException("invalid key: " + id, ConfigFile.this, kvp.getKey());
 					}
 				}
 			}

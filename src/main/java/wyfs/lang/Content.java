@@ -17,10 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-
-import wyfs.lang.Path.Entry;
-import wyfs.lang.Path.ID;
-import wybs.lang.Path;
+import wycc.lang.Path;
 
 public class Content {
 
@@ -43,17 +40,6 @@ public class Content {
 		public String getSuffix();
 
 		/**
-		 * Physically read the raw bytes from a given input stream and convert
-		 * into the format described by this content type.
-		 *
-		 * @param input
-		 *            --- input stream representing in the format described by
-		 *            this content type.
-		 * @return
-		 */
-		public T read(wyfs.lang.Path.Entry<T> e, InputStream input) throws IOException;
-
-		/**
 		 * Physically read the raw bytes from a given input stream and convert into the
 		 * format described by this content type.
 		 *
@@ -62,7 +48,7 @@ public class Content {
 		 *              content type.
 		 * @return
 		 */
-		public T read(wyfs.lang.Path.ID id, InputStream input) throws IOException;
+		public T read(Path id, InputStream input) throws IOException;
 		
 		/**
 		 * Convert an object in the format described by this content type into
@@ -105,17 +91,12 @@ public class Content {
 		}
 
 		@Override
-		public byte[] read(Entry<byte[]> e, InputStream input) throws IOException {
-			return e.read();
-		}
-
-		@Override
 		public void write(OutputStream output, byte[] bytes) throws IOException {
 			output.write(bytes);
 		}
 
 		@Override
-		public byte[] read(ID id, InputStream input) throws IOException {
+		public byte[] read(Path id, InputStream input) throws IOException {
 			throw new UnsupportedOperationException();
 		}
 
@@ -141,7 +122,7 @@ public class Content {
 		 *            --- entry to test.
 		 * @return --- entry (retyped) if it matches, otherwise null.
 		 */
-		public boolean matches(wyfs.lang.Path.ID id, Content.Type<T> ct);
+		public boolean matches(Path id, Content.Type<T> ct);
 
 		/**
 		 * Check whether a given subpath is matched by this filter. A matching
@@ -151,7 +132,7 @@ public class Content {
 		 * @param id
 		 * @return
 		 */
-		public boolean matchesSubpath(wyfs.lang.Path.ID id);
+		public boolean matchesSubpath(Path id);
 	}
 
 	/**
@@ -161,14 +142,14 @@ public class Content {
 	 * @param contentType
 	 * @return
 	 */
-	public static <T> Filter<T> filter(final wyfs.lang.Path.Filter filter, final Content.Type<T> contentType) {
+	public static <T> Filter<T> filter(final Path.Filter filter, final Content.Type<T> contentType) {
 		return new Filter<T>() {
 			@Override
-			public boolean matches(wyfs.lang.Path.ID id, Content.Type<T> ct) {
+			public boolean matches(Path id, Content.Type<T> ct) {
 				return ct == contentType && filter.matches(id);
 			}
 			@Override
-			public boolean matchesSubpath(wyfs.lang.Path.ID id) {
+			public boolean matchesSubpath(Path id) {
 				return filter.matchesSubpath(id);
 			}
 			@Override
@@ -186,14 +167,14 @@ public class Content {
 	 * @return
 	 */
 	public static <T> Filter<T> filter(final String pathFilter, final Content.Type<T> contentType) {
-		final wyfs.lang.Path.Filter filter = Path.fromString(pathFilter);
+		final Path.Filter filter = Path.fromFilterString(pathFilter);
 		return new Filter<T>() {
 			@Override
-			public boolean matches(wyfs.lang.Path.ID id, Content.Type<T> ct) {
+			public boolean matches(Path id, Content.Type<T> ct) {
 				return ct == contentType && filter.matches(id);
 			}
 			@Override
-			public boolean matchesSubpath(wyfs.lang.Path.ID id) {
+			public boolean matchesSubpath(Path id) {
 				return filter.matchesSubpath(id);
 			}
 			@Override
@@ -213,11 +194,11 @@ public class Content {
 	public static <T> Filter<T> or(final Filter<T> f1, final Filter<T> f2) {
 		return new Filter<T>() {
 			@Override
-			public boolean matches(wyfs.lang.Path.ID id, Content.Type<T> ct) {
+			public boolean matches(Path id, Content.Type<T> ct) {
 				return f1.matches(id, ct) || f2.matches(id, ct);
 			}
 			@Override
-			public boolean matchesSubpath(wyfs.lang.Path.ID id) {
+			public boolean matchesSubpath(Path id) {
 				return f1.matchesSubpath(id) || f2.matchesSubpath(id);
 			}
 			@Override
@@ -238,11 +219,11 @@ public class Content {
 	public static <T> Filter<T> and(final Filter<T> f1, final Filter<T> f2) {
 		return new Filter<T>() {
 			@Override
-			public boolean matches(wyfs.lang.Path.ID id, Content.Type<T> ct) {
+			public boolean matches(Path id, Content.Type<T> ct) {
 				return f1.matches(id, ct) && f2.matches(id, ct);
 			}
 			@Override
-			public boolean matchesSubpath(wyfs.lang.Path.ID id) {
+			public boolean matchesSubpath(Path id) {
 				return f1.matchesSubpath(id) && f2.matchesSubpath(id);
 			}
 			@Override
@@ -271,16 +252,6 @@ public class Content {
 	 *
 	 */
 	public interface Registry {
-
-		/**
-		 * Attempt to associate a content type with this entry.
-		 *
-		 * @param e
-		 *            --- entry to associate with a content type.
-		 * @return
-		 */
-		public void associate(wyfs.lang.Path.Entry<?> e);
-
 		/**
 		 * Determine an appropriate suffix for a given content type.
 		 *

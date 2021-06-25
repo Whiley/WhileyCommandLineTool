@@ -29,6 +29,7 @@ import wycli.lang.Semantic;
 import wycli.lang.Package.Repository;
 import wycc.util.Pair;
 import wycc.lang.Path;
+import wyfs.lang.FileSystem;
 
 /**
  * Provides a default and relatively simplistic approach for resolving packages.
@@ -46,8 +47,8 @@ public class StdPackageResolver implements Package.Resolver {
 	}
 
 	@Override
-	public List<wyfs.lang.Path.Root> resolve(Configuration cf) throws IOException {
-		ArrayList<wyfs.lang.Path.Root> packages = new ArrayList<>();
+	public List<FileSystem.Root> resolve(Configuration cf) throws IOException {
+		ArrayList<FileSystem.Root> packages = new ArrayList<>();
 		// Extract all dependencies from target config file
 		List<Pair<String,String>> dependencies = extractDependencies(cf);
 		// Visited set stores all packages we have visited. This is used to ensure no
@@ -66,17 +67,17 @@ public class StdPackageResolver implements Package.Resolver {
 		return repository;
 	}
 
-	private List<Pair<String, String>> process(List<wyfs.lang.Path.Root> packages, List<Pair<String, String>> batch, Set<Pair<String, String>> visited) throws IOException {
+	private List<Pair<String, String>> process(List<FileSystem.Root> packages, List<Pair<String, String>> batch, Set<Pair<String, String>> visited) throws IOException {
 		// Children will store all dependencies of those in batch
 		ArrayList<Pair<String,String>> children = new ArrayList<>();
 		// Process current batch of dependencies
 		for (Pair<String, String> dep : batch) {
 			String name = dep.first();
 			Semantic.Version version = resolveLatestCompatible(name,new Semantic.Version(dep.second()));
-			wyfs.lang.Path.Root pkg = repository.get(name, version);
+			FileSystem.Root pkg = repository.get(name, version);
 			if (pkg != null) {
 				// Read package configuration file.
-				wyfs.lang.Path.Entry<ConfigFile> entry = pkg.get(Path.fromString("wy"), ConfigFile.ContentType);
+				FileSystem.Entry<ConfigFile> entry = pkg.get(Path.fromString("wy"), ConfigFile.ContentType);
 				if (entry == null) {
 					// Something is wrong
 					environment.getLogger()
@@ -129,11 +130,11 @@ public class StdPackageResolver implements Package.Resolver {
 
 	private List<Pair<String, String>> extractDependencies(Configuration cf) {
 		//
-		List<wyfs.lang.Path.ID> deps = cf.matchAll(Path.fromString("dependencies/**"));
+		List<FileSystem.ID> deps = cf.matchAll(Path.fromString("dependencies/**"));
 		// Determine dependency roots
 		List<Pair<String, String>> pairs = new ArrayList<>();
 		for (int i = 0; i != deps.size(); ++i) {
-			wyfs.lang.Path.ID dep = deps.get(i);
+			FileSystem.ID dep = deps.get(i);
 			// Get dependency name
 			String name = dep.get(1);
 			// Get version string
