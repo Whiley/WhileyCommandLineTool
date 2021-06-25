@@ -77,8 +77,6 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 	private Tuple<Declaration> declarations;
 
 	public ConfigFile(Path id) {
-		super(null);
-		//
 		this.declarations = new Tuple<>();
 		this.id = id;
 	}

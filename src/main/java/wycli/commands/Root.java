@@ -1,5 +1,6 @@
 package wycli.commands;
 
+import wycc.lang.Path;
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
 
@@ -78,7 +79,7 @@ public class Root implements Command {
     }
 
     @Override
-    public boolean execute(Path.ID path, Command.Template template) throws Exception {
+    public boolean execute(Path path, Command.Template template) throws Exception {
         boolean verbose = template.getOptions().get("verbose", Boolean.class);
         //
         if (template.getChild() != null) {

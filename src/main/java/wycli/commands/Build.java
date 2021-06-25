@@ -30,6 +30,7 @@ import wycc.lang.SyntacticHeap;
 import wycc.lang.SyntacticItem;
 import wycc.lang.SourceFile;
 import wycc.lang.Build.Repository;
+import wycc.lang.Build.Artifact;
 import wycc.util.AbstractCompilationUnit;
 import wycc.util.AbstractCompilationUnit.Attribute;
 import wycc.util.AbstractCompilationUnit.Attribute.Span;
@@ -171,16 +172,6 @@ public class Build implements Command {
 	 * @param executor
 	 * @throws IOException
 	 */
-	public static void printSyntacticMarkers(PrintStream output, Collection<Path.Entry<?>> sources, Path.Entry<?> target) throws IOException {
-		// Extract all syntactic markers from entries in the build graph
-		List<SyntacticItem.Marker> items = extractSyntacticMarkers(target);
-		// For each marker, print out error messages appropriately
-		for (int i = 0; i != items.size(); ++i) {
-			// Log the error message
-			printSyntacticMarkers(output, sources, items.get(i));
-		}
-	}
-
 	public static void printSyntacticMarkers(PrintStream output, SyntacticHeap target, SourceFile... sources) throws IOException {
 		// Extract all syntactic markers from entries in the build graph
 		List<SyntacticItem.Marker> items = extractSyntacticMarkers(target);
@@ -196,28 +187,10 @@ public class Build implements Command {
 	 *
 	 * @param marker
 	 */
-	public static void printSyntacticMarkers(PrintStream output, Collection<Path.Entry<?>> sources, SyntacticItem.Marker marker) {
-		//
-		Path.Entry<?> source = getSourceEntry(sources,marker.getSource());
-		//
-		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
-		// Read the enclosing line so we can print it
-		EnclosingLine line = readEnclosingLine(source, span);
-		// Sanity check we found it
-		if(line != null) {
-			// print the error message
-			output.println(source.location() + ":" + line.lineNumber + ": " + marker.getMessage());
-			// Finally print the line highlight
-			printLineHighlight(output, line);
-		} else {
-			output.println(source.location() + ":?: " + marker.getMessage());
-		}
-	}
-
 	public static void printSyntacticMarkers(PrintStream output, SyntacticItem.Marker marker, SourceFile... sources) {
 		// Identify enclosing source file
 		SourceFile source = getSourceEntry(marker.getSource(), sources);
-		String filename = source.getID() + "." + source.getContentType().getSuffix();
+		String filename = source.getID().toString();
 		//
 		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
 		// Read the enclosing line so we can print it
@@ -233,15 +206,14 @@ public class Build implements Command {
 		}
 	}
 
-	public static List<SyntacticItem.Marker> extractSyntacticMarkers(Path.Entry<?>... binaries) throws IOException {
+	public static List<SyntacticItem.Marker> extractSyntacticMarkers(wycc.lang.Build.Artifact... binaries) throws IOException {
 		List<SyntacticItem.Marker> annotated = new ArrayList<>();
 		//
-		for (Path.Entry<?> binary : binaries) {
-			Object o = binary.read();
+		for (Artifact b : binaries) {
 			// If the object in question can be decoded as a syntactic heap then we can look
 			// for syntactic messages.
-			if (o instanceof SyntacticHeap) {
-				annotated.addAll(extractSyntacticMarkers((SyntacticHeap) o));
+			if (b instanceof SyntacticHeap) {
+				annotated.addAll(extractSyntacticMarkers((SyntacticHeap) b));
 			}
 		}
 		//
@@ -264,20 +236,7 @@ public class Build implements Command {
 		return annotated;
 	}
 
-	private static Path.Entry<?> getSourceEntry(Collection<Path.Entry<?>> sources, Path.ID id) {
-		String str = id.toString();
-		//
-		for (Path.Entry<?> s : sources) {
-			// FIXME: this is obviously a bad hack for now
-			String sid = s.id().toString();
-			if (sid.endsWith(str)) {
-				return s;
-			}
-		}
-		return null;
-	}
-
-	private static SourceFile getSourceEntry(Path.ID id, SourceFile... sources) {
+	private static SourceFile getSourceEntry(Path id, SourceFile... sources) {
 		//
 		for (SourceFile s : sources) {
 			if (id.equals(s.getID())) {
@@ -286,7 +245,6 @@ public class Build implements Command {
 		}
 		return null;
 	}
-
 
 	private static void printLineHighlight(PrintStream output,
 			EnclosingLine enclosing) {
@@ -343,44 +301,6 @@ public class Build implements Command {
 			str += "^";
 		}
 		output.println(str);
-	}
-
-	private static EnclosingLine readEnclosingLine(Path.Entry<?> entry, Attribute.Span location) {
-		int spanStart = location.getStart().get().intValue();
-		int spanEnd = location.getEnd().get().intValue();
-		int line = 0;
-		int lineStart = 0;
-		int lineEnd = 0;
-		StringBuilder text = new StringBuilder();
-		try {
-			BufferedReader in = new BufferedReader(new InputStreamReader(entry.inputStream(), "UTF-8"));
-
-			// first, read whole file
-			int len = 0;
-			char[] buf = new char[1024];
-			while ((len = in.read(buf)) != -1) {
-				text.append(buf, 0, len);
-			}
-
-			while (lineEnd < text.length() && lineEnd <= spanStart) {
-				lineStart = lineEnd;
-				lineEnd = parseLine(text, lineEnd);
-				line = line + 1;
-			}
-		} catch (IOException e) {
-			return null;
-		}
-		lineEnd = Math.min(lineEnd, text.length());
-
-		return new EnclosingLine(spanStart, spanEnd, line, lineStart, lineEnd,
-				text.substring(lineStart, lineEnd));
-	}
-
-	private static int parseLine(StringBuilder buf, int index) {
-		while (index < buf.length() && buf.charAt(index) != '\n') {
-			index++;
-		}
-		return index + 1;
 	}
 
 	private static class EnclosingLine {

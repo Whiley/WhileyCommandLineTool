@@ -21,7 +21,6 @@ import java.util.*;
 import wycc.util.AbstractCompilationUnit.Value;
 import wycc.lang.Build;
 import wycc.lang.SyntacticException;
-import wycc.util.FileRepository;
 import wycc.util.Logger;
 import wycli.cfg.*;
 import wycli.commands.Help;
@@ -32,6 +31,7 @@ import wycli.util.CommandParser;
 import wyfs.lang.Content;
 import wyfs.lang.FileSystem;
 import wyfs.util.DefaultContentRegistry;
+import wyfs.util.FileRepository;
 import wycc.util.Pair;
 import wycc.lang.Path;
 import wyfs.util.ZipFile;
@@ -49,7 +49,7 @@ public class Main implements Command.Environment {
 	/**
 	 * Path to the dependency repository within the global root.
 	 */
-	public static final FileSystem.ID DEFAULT_REPOSITORY_PATH = Path.fromString("repository");
+	public static final Path DEFAULT_REPOSITORY_PATH = Path.fromString("repository");
 
 	public static final Command.Descriptor[] DEFAULT_COMMANDS = {
 			Help.DESCRIPTOR, wycli.commands.Build.DESCRIPTOR
@@ -121,7 +121,7 @@ public class Main implements Command.Environment {
 	}
 
 	@Override
-	public Configuration get(FileSystem.ID path) {
+	public Configuration get(Path path) {
 		return null;
 	}
 
@@ -151,9 +151,9 @@ public class Main implements Command.Environment {
 	public static void main(String[] args) throws Exception {
 		int exitCode;
 		// Construct environment and determine path
-		Pair<Main, FileSystem.ID> mp = constructMainEnvironment(BOOT_LOGGER);
+		Pair<Main, Path> mp = constructMainEnvironment(BOOT_LOGGER);
 		Main env = mp.first();
-		FileSystem.ID path = mp.second();
+		Path path = mp.second();
 		// Add default descriptors
 		env.getCommandDescriptors().addAll(Arrays.asList(DEFAULT_COMMANDS));
 		// Construct environment and execute arguments
@@ -202,7 +202,7 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<Main, FileSystem.ID> constructMainEnvironment(Logger logger) throws IOException {
+	private static Pair<Main, Path> constructMainEnvironment(Logger logger) throws IOException {
 		// Determine system-wide directory
 		FileRepository systemRoot = determineSystemRoot();
 		// Determine user-wide directory
@@ -212,9 +212,9 @@ public class Main implements Command.Environment {
 		// Construct plugin environment and activate plugins
 		Plugin.Environment env = activatePlugins(system, logger);
 		// Determine top-level directory and relative path
-		Pair<File, FileSystem.ID> lrp = determineLocalRootDirectory();
+		Pair<File, Path> lrp = determineLocalRootDirectory();
 		File localDir = lrp.first();
-		FileSystem.ID pid = lrp.second();
+		Path pid = lrp.second();
 		// Construct build directory
 		File buildDir = determineBuildDirectory(localDir, logger);
 		// Construct local root
@@ -288,7 +288,7 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static Pair<File, FileSystem.ID> determineLocalRootDirectory() throws IOException {
+	private static Pair<File, Path> determineLocalRootDirectory() throws IOException {
 		// Search for inner configuration.
 		File inner = findConfigFile(new File("."));
 		if (inner == null) {
@@ -319,9 +319,9 @@ public class Main implements Command.Environment {
 	private static Plugin.Environment activatePlugins(Configuration global, Logger logger) {
 		Plugin.Environment env = new Plugin.Environment(logger);
 		// Determine the set of install plugins
-		List<FileSystem.ID> plugins = global.matchAll(Path.fromString("plugins/*"));
+		List<Path> plugins = global.matchAll(Path.fromFilterString("plugins/*"));
 		// start modules
-		for (FileSystem.ID id : plugins) {
+		for (Path id : plugins) {
 			String activator = id.toString();
 			Value.Bool enabled = global.get(Value.Bool.class, id);
 			// Only activate if enabled
@@ -378,14 +378,14 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(FileRepository root, FileSystem.ID id, Logger logger, Configuration.Schema... schemas) throws IOException {
+	public static Configuration readConfigFile(FileRepository root, Path id, Logger logger, Configuration.Schema... schemas) throws IOException {
 		// Combine schemas together
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
 		try {
 			// Read the configuration file
-			ConfigFile cf = root.get().get(ConfigFile.ContentType,id);
+			ConfigFile cf = root.get().get(id, ConfigFile.class);
 			// Log the event
-			logger.logTimedMessage("Read " + root.getDirectory() + "/" + id + ".toml",0, 0);
+			logger.logTimedMessage("Read " + root.getDirectory() + "/" + id + ".toml", 0, 0);
 			// Construct configuration according to given schema
 			return cf.toConfiguration(schema, false);
 		} catch (SyntacticException e) {

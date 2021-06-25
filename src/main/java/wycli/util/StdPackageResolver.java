@@ -130,11 +130,11 @@ public class StdPackageResolver implements Package.Resolver {
 
 	private List<Pair<String, String>> extractDependencies(Configuration cf) {
 		//
-		List<FileSystem.ID> deps = cf.matchAll(Path.fromString("dependencies/**"));
+		List<Path> deps = cf.matchAll(Path.fromFilterString("dependencies/**"));
 		// Determine dependency roots
 		List<Pair<String, String>> pairs = new ArrayList<>();
 		for (int i = 0; i != deps.size(); ++i) {
-			FileSystem.ID dep = deps.get(i);
+			Path dep = deps.get(i);
 			// Get dependency name
 			String name = dep.get(1);
 			// Get version string
