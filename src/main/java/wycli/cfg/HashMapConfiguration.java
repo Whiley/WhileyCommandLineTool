@@ -13,6 +13,7 @@
 // limitations under the License.
 package wycli.cfg;
 
+import wycc.lang.Filter;
 import wycc.lang.Path;
 
 import java.util.ArrayList;
@@ -71,7 +72,7 @@ public class HashMapConfiguration implements Configuration {
 	}
 
 	@Override
-	public List<Path> matchAll(Path.Filter filter) {
+	public List<Path> matchAll(Filter filter) {
 		ArrayList<Path> ids = new ArrayList<>();
 		for (Path id : entries.keySet()) {
 			if (filter.matches(id)) {

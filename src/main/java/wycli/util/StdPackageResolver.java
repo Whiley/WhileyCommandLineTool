@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import wycc.lang.Filter;
 import wycc.util.AbstractCompilationUnit.Value.UTF8;
 import wycli.Schemas;
 import wycli.cfg.ConfigFile;
@@ -130,7 +131,7 @@ public class StdPackageResolver implements Package.Resolver {
 
 	private List<Pair<String, String>> extractDependencies(Configuration cf) {
 		//
-		List<Path> deps = cf.matchAll(Path.fromFilterString("dependencies/**"));
+		List<Path> deps = cf.matchAll(Filter.fromString("dependencies/**"));
 		// Determine dependency roots
 		List<Pair<String, String>> pairs = new ArrayList<>();
 		for (int i = 0; i != deps.size(); ++i) {

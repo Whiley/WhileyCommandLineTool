@@ -13,6 +13,7 @@
 // limitations under the License.
 package wycli.cfg;
 
+import wycc.lang.Filter;
 import wycc.lang.Path;
 
 import java.util.ArrayList;
@@ -51,7 +52,7 @@ public class ConfigurationCombinator implements Configuration {
 	}
 
 	@Override
-	public List<Path> matchAll(Path.Filter filter) {
+	public List<Path> matchAll(Filter filter) {
 		ArrayList<Path> results = new ArrayList<>();
 		for(int i=0;i!=configurations.length;++i) {
 			results.addAll(configurations[i].matchAll(filter));

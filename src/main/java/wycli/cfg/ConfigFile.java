@@ -21,13 +21,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import wycc.lang.Build;
-import wycc.lang.SyntacticItem;
-import wycc.lang.SyntacticException;
+import wycc.lang.*;
 import wycc.util.AbstractCompilationUnit;
 import wycc.util.AbstractSyntacticItem;
 import wyfs.lang.Content;
-import wycc.lang.Path;
 
 public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements Build.Artifact {
 	// =========================================================================
@@ -304,13 +301,13 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		}
 
 		@Override
-		public List<Path> matchAll(Path.Filter filter) {
+		public List<Path> matchAll(Filter filter) {
 			ArrayList<Path> matches = new ArrayList<>();
 			match(Path.ROOT,filter,declarations,matches);
 			return matches;
 		}
 
-		private void match(Path id, Path.Filter filter, Tuple<? extends Declaration> declarations, ArrayList<Path> matches) {
+		private void match(Path id, Filter filter, Tuple<? extends Declaration> declarations, ArrayList<Path> matches) {
 			for (int i = 0; i != declarations.size(); ++i) {
 				Declaration decl = declarations.get(i);
 				if (decl instanceof Table) {
@@ -366,7 +363,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 			}
 			if(strict) {
 				// Check whether any unmatched key-valid pairs exist or not
-				List<Path> all = matchAll(Path.fromFilterString("**/*"));
+				List<Path> all = matchAll(Filter.fromString("**/*"));
 				for(int i=0;i!=all.size();++i) {
 					Path id = all.get(i);
 					if(!matched.contains(id)) {

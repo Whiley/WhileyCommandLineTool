@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 
+import wycc.lang.Filter;
 import wycc.util.AbstractCompilationUnit.Value;
 import wycc.lang.Build;
 import wycc.lang.SyntacticException;
@@ -319,7 +320,7 @@ public class Main implements Command.Environment {
 	private static Plugin.Environment activatePlugins(Configuration global, Logger logger) {
 		Plugin.Environment env = new Plugin.Environment(logger);
 		// Determine the set of install plugins
-		List<Path> plugins = global.matchAll(Path.fromFilterString("plugins/*"));
+		List<Path> plugins = global.matchAll(Filter.fromString("plugins/*"));
 		// start modules
 		for (Path id : plugins) {
 			String activator = id.toString();

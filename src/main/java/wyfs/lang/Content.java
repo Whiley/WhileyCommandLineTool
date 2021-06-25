@@ -142,7 +142,7 @@ public class Content {
 	 * @param contentType
 	 * @return
 	 */
-	public static <T> Filter<T> filter(final Path.Filter filter, final Content.Type<T> contentType) {
+	public static <T> Filter<T> filter(final Filter filter, final Content.Type<T> contentType) {
 		return new Filter<T>() {
 			@Override
 			public boolean matches(Path id, Content.Type<T> ct) {
@@ -167,7 +167,7 @@ public class Content {
 	 * @return
 	 */
 	public static <T> Filter<T> filter(final String pathFilter, final Content.Type<T> contentType) {
-		final Path.Filter filter = Path.fromFilterString(pathFilter);
+		final Filter filter = Filter.fromString(pathFilter);
 		return new Filter<T>() {
 			@Override
 			public boolean matches(Path id, Content.Type<T> ct) {
