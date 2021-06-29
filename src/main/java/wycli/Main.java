@@ -124,7 +124,7 @@ public class Main implements Command.Environment {
 
 	@Override
 	public Build.Repository getRepository() {
-		return buildRepository;
+		return localRepository;
 	}
 
 	@Override
