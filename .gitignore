@@ -1,0 +1,12 @@
+.classpath
+.project
+*.iml
+*.class
+*.wyil
+*.wyasm
+*.wycs
+*~
+*.c
+*.o
+*.jar
+/target/
