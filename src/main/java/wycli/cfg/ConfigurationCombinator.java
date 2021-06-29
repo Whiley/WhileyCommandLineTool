@@ -92,4 +92,13 @@ public class ConfigurationCombinator implements Configuration {
 		//
 		return Configuration.toCombinedSchema(schemas);
 	}
+
+	@Override
+	public String toString() {
+		String r = "";
+		for(int i=0;i!=configurations.length;++i) {
+			r += configurations[i].toString();
+		}
+		return r;
+	}
 }

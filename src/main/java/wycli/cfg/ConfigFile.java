@@ -307,6 +307,33 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 			return matches;
 		}
 
+		@Override
+		public String toString() {
+			List<Path> keys = matchAll(Filter.fromString("**/*"));
+			String r = "{";
+			for(int i=0;i!=keys.size();++i) {
+				Path ith = keys.get(i);
+				r = (i == 0) ? r : r + ",";
+				r += ith + "=" + get(ith);
+			}
+			return r + "}";
+		}
+
+		private Object get(Path key) {
+			// Get the descriptor for this key
+			Configuration.KeyValueDescriptor<?> descriptor = schema.getDescriptor(key);
+			// Find the key-value pair
+			KeyValuePair kvp = getKeyValuePair(key, declarations);
+			if(kvp == null && descriptor.hasDefault()) {
+				return descriptor.getDefault();
+			} else if(kvp != null) {
+				// Extract the value
+				return kvp.getValue();
+			} else {
+				throw new SyntacticException("invalid key access: " + key, ConfigFile.this, null);
+			}
+		}
+
 		private void match(Path id, Filter filter, Tuple<? extends Declaration> declarations, ArrayList<Path> matches) {
 			for (int i = 0; i != declarations.size(); ++i) {
 				Declaration decl = declarations.get(i);

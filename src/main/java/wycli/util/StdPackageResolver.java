@@ -85,7 +85,7 @@ public class StdPackageResolver implements Package.Resolver {
 							.logTimedMessage("Corrupt package " + pkg + "-v" + version + " (missing wy.toml)", 0, 0);
 				} else {
 					// Convert file into configuration
-					Configuration cf = entry.read().toConfiguration(Schemas.PACKAGE_SCHEMA, false);
+					Configuration cf = entry.read().toConfiguration(Schemas.PACKAGE, false);
 					// Add all (non-visited) child dependencies
 					for(Pair<String, String> d : extractDependencies(cf)) {
 						if(!visited.contains(d)) {

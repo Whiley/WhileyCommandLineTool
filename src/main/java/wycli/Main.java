@@ -24,6 +24,7 @@ import wycc.lang.Build;
 import wycc.lang.SyntacticException;
 import wycc.util.Logger;
 import wycli.cfg.*;
+import wycli.cfg.Configuration.Schema;
 import wycli.commands.Help;
 import wycli.lang.Command;
 import wycli.lang.Package;
@@ -85,12 +86,17 @@ public class Main implements Command.Environment {
 	 * The main repository for storing build artifacts and source files which is properly versioned.
 	 */
 	private final Build.Repository buildRepository;
+	/**
+	 *
+	 */
+	private final Schema localSchema;
 
 	public Main(Plugin.Environment env, FileRepository globalRepo, FileRepository localRepo, Build.Repository buildRepo) {
 		this.env = env;
 		this.globalRepository = globalRepo;
 		this.localRepository = localRepo;
 		this.buildRepository = buildRepo;
+		this.localSchema = constructSchema();
 		// Setup package resolver
 		//this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, env, repository));
 		this.resolver = null;
@@ -123,7 +129,18 @@ public class Main implements Command.Environment {
 
 	@Override
 	public Configuration get(Path path) {
-		return null;
+		ArrayList<Configuration> files = new ArrayList<>();
+		// Pull out all configuration files upto the root
+		while (path != null) {
+			ConfigFile cf = localRepository.get().get(path.append("wy"), ConfigFile.class);
+			if (cf != null) {
+				Configuration c = cf.toConfiguration(localSchema, false);
+				files.add(c);
+			}
+			path = path.parent();
+		}
+		// Construct the combinator
+		return new ConfigurationCombinator(files.toArray(new Configuration[files.size()]));
 	}
 
 	@Override
@@ -143,6 +160,25 @@ public class Main implements Command.Environment {
 
 	public void setMeter(Build.Meter meter) {
 		this.meter = meter;
+	}
+
+	private Schema constructSchema() {
+		List<Command.Platform> buildPlatforms = getCommandPlatforms();
+		List<Command.Descriptor> cmdDescriptors = getCommandDescriptors();
+
+		Configuration.Schema[] schemas = new Configuration.Schema[buildPlatforms.size() + cmdDescriptors.size() + 1];
+		int index = 0;
+		schemas[index++] = Schemas.PACKAGE;
+		for (int i = 0; i != buildPlatforms.size(); ++i) {
+			Command.Platform platform = buildPlatforms.get(i);
+			schemas[index++] = platform.getConfigurationSchema();
+		}
+		for (int i = 0; i != cmdDescriptors.size(); ++i) {
+			Command.Descriptor cmd = cmdDescriptors.get(i);
+			schemas[index++] = cmd.getConfigurationSchema();
+		}
+		// Construct combined schema
+		return Configuration.toCombinedSchema(schemas);
 	}
 
 	// ==================================================================
@@ -212,6 +248,8 @@ public class Main implements Command.Environment {
 		Configuration system = readConfigFile(systemRoot, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
 		// Construct plugin environment and activate plugins
 		Plugin.Environment env = activatePlugins(system, logger);
+		// Register content type for configuration files
+		env.register(Content.Type.class, ConfigFile.ContentType);
 		// Determine top-level directory and relative path
 		Pair<File, Path> lrp = determineLocalRootDirectory();
 		File localDir = lrp.first();
@@ -323,21 +361,18 @@ public class Main implements Command.Environment {
 		List<Path> plugins = global.matchAll(Filter.fromString("plugins/*"));
 		// start modules
 		for (Path id : plugins) {
-			String activator = id.toString();
-			Value.Bool enabled = global.get(Value.Bool.class, id);
+			Value.UTF8 activator = global.get(Value.UTF8.class, id);
 			// Only activate if enabled
-			if(enabled.get()) {
-				try {
-					Class<?> c = Class.forName(activator.toString());
-					Plugin.Activator instance = (Plugin.Activator) c.newInstance();
-					env.activate(instance);
-				} catch (ClassNotFoundException e) {
-					e.printStackTrace();
-				} catch (InstantiationException e) {
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					e.printStackTrace();
-				}
+			try {
+				Class<?> c = Class.forName(activator.toString());
+				Plugin.Activator instance = (Plugin.Activator) c.newInstance();
+				env.activate(instance);
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
 			}
 		}
 		// Done

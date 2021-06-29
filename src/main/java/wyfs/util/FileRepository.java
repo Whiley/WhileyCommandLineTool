@@ -2,6 +2,7 @@ package wyfs.util;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
@@ -56,6 +57,20 @@ public class FileRepository extends AbstractRepository {
      */
     public File getDirectory() {
         return dir;
+    }
+
+    @Override
+	public String toString() {
+    	String r = "{";
+    	boolean firstTime = true;
+    	for(Build.Artifact f : get()) {
+    		if(!firstTime) {
+    			r += ",";
+    		}
+    		r += f.getID();
+    		firstTime = false;
+    	}
+    	return r + "}";
     }
 
     /**

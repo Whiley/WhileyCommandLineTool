@@ -29,7 +29,7 @@ public class Schemas {
      * Schema for system configuration (i.e. which applies to all users).
      */
     public static Configuration.Schema SYSTEM_CONFIG_SCHEMA = Configuration.fromArray(
-            Configuration.UNBOUND_BOOLEAN(Filter.fromString("plugins/*"), "list of globally installed plugins", true));
+            Configuration.UNBOUND_STRING(Filter.fromString("plugins/*"), "list of globally installed plugins", true));
 
     /**
      * Schema for global configuration (i.e. which applies to all projects for a given user).
@@ -61,7 +61,7 @@ public class Schemas {
     /**
      * Schema for packages (i.e. which applies to a single project for a given user).
      */
-    public static Configuration.Schema PACKAGE_SCHEMA = Configuration.fromArray(
+    public static Configuration.Schema PACKAGE = Configuration.fromArray(
             // Required items
             Configuration.UNBOUND_STRING(Path.fromString("package/name"), "Name of this package", new AbstractCompilationUnit.Value.UTF8("main")),
             Configuration.UNBOUND_STRING_ARRAY(Path.fromString("package/authors"), "Author(s) of this package", false),
