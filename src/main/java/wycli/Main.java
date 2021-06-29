@@ -84,9 +84,9 @@ public class Main implements Command.Environment {
 	/**
 	 * The main repository for storing build artifacts and source files which is properly versioned.
 	 */
-	private final Build.Repository<?> buildRepository;
+	private final Build.Repository buildRepository;
 
-	public Main(Plugin.Environment env, FileRepository globalRepo, FileRepository localRepo, Build.Repository<?> buildRepo) {
+	public Main(Plugin.Environment env, FileRepository globalRepo, FileRepository localRepo, Build.Repository buildRepo) {
 		this.env = env;
 		this.globalRepository = globalRepo;
 		this.localRepository = localRepo;
@@ -117,7 +117,7 @@ public class Main implements Command.Environment {
 	}
 
 	@Override
-	public Build.Repository<?> getRepository() {
+	public Build.Repository getRepository() {
 		return buildRepository;
 	}
 

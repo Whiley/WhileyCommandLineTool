@@ -49,7 +49,7 @@ public class Content {
 		 * @return
 		 */
 		public T read(Path id, InputStream input) throws IOException;
-		
+
 		/**
 		 * Convert an object in the format described by this content type into
 		 * an appropriate byte stream and write it to an output stream
@@ -142,7 +142,7 @@ public class Content {
 	 * @param contentType
 	 * @return
 	 */
-	public static <T> Filter<T> filter(final Filter filter, final Content.Type<T> contentType) {
+	public static <T> Filter<T> filter(final wycc.lang.Filter filter, final Content.Type<T> contentType) {
 		return new Filter<T>() {
 			@Override
 			public boolean matches(Path id, Content.Type<T> ct) {
@@ -150,7 +150,7 @@ public class Content {
 			}
 			@Override
 			public boolean matchesSubpath(Path id) {
-				return filter.matchesSubpath(id);
+				return filter.matches(id);
 			}
 			@Override
 			public String toString() {
@@ -167,7 +167,7 @@ public class Content {
 	 * @return
 	 */
 	public static <T> Filter<T> filter(final String pathFilter, final Content.Type<T> contentType) {
-		final Filter filter = Filter.fromString(pathFilter);
+		final wycc.lang.Filter filter = wycc.lang.Filter.fromString(pathFilter);
 		return new Filter<T>() {
 			@Override
 			public boolean matches(Path id, Content.Type<T> ct) {
@@ -175,7 +175,7 @@ public class Content {
 			}
 			@Override
 			public boolean matchesSubpath(Path id) {
-				return filter.matchesSubpath(id);
+				return filter.matches(id);
 			}
 			@Override
 			public String toString() {

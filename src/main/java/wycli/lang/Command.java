@@ -31,7 +31,7 @@ import wyfs.lang.Content;
  * @author David J. Pearce
  *
  */
-public interface Command<S extends Build.SnapShot<S>> {
+public interface Command {
 
 	/**
 	 * Get a descriptor for this command.
@@ -99,7 +99,7 @@ public interface Command<S extends Build.SnapShot<S>> {
 		 *
 		 * @return
 		 */
-		public Repository<?> getRepository();
+		public Repository getRepository();
 
 		/**
 		 * Get the configuration associated with a given build path.  The key is that the configuration at a given path
@@ -131,7 +131,7 @@ public interface Command<S extends Build.SnapShot<S>> {
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface Platform<S extends Build.SnapShot<S>> {
+	public interface Platform {
 		/**
 		 * Get the unique name identifying this platform.
 		 *
@@ -155,7 +155,7 @@ public interface Command<S extends Build.SnapShot<S>> {
 		 *            Enclosing project for this build task
 		 * @return
 		 */
-		public Build.Task<S> initialise(Environment environment) throws IOException;
+		public Build.Task initialise(Path path, Environment environment) throws IOException;
 	}
 
 	/**

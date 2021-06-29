@@ -30,6 +30,7 @@ import wycc.lang.SyntacticHeap;
 import wycc.lang.SyntacticItem;
 import wycc.lang.SourceFile;
 import wycc.lang.Build.Repository;
+import wycc.lang.Build.SnapShot;
 import wycc.lang.Build.Artifact;
 import wycc.util.AbstractCompilationUnit;
 import wycc.util.AbstractCompilationUnit.Attribute;
@@ -127,7 +128,7 @@ public class Build implements Command {
 		List<wycc.lang.Build.Task> tasks = new ArrayList<>();
 		// Construct tasks
 		for(Command.Platform p : environment.getCommandPlatforms()) {
-			tasks.add(p.initialise(environment));
+			tasks.add(p.initialise(path, environment));
 		}
 		// Construct pipeline
 		Pipeline pipeline = new Pipeline(tasks);
@@ -141,19 +142,19 @@ public class Build implements Command {
 		return (pipeline.completed == tasks.size());
 	}
 
-	private static class Pipeline<S extends wycc.lang.Build.SnapShot<S>> implements Function<S,S> {
-		private final List<wycc.lang.Build.Task<S>> tasks;
+	private static class Pipeline implements Function<SnapShot,SnapShot> {
+		private final List<wycc.lang.Build.Task> tasks;
 		private int completed;
 
-		private Pipeline(List<wycc.lang.Build.Task<S>> tasks) {
+		private Pipeline(List<wycc.lang.Build.Task> tasks) {
 			this.tasks = tasks;
 		}
 
 		@Override
-		public S apply(S s) {
+		public SnapShot apply(SnapShot s) {
 			for (int i = 0; i != tasks.size(); ++i) {
-				wycc.lang.Build.Task<S> ith = tasks.get(i);
-				Pair<S, Boolean> p = ith.apply(s);
+				wycc.lang.Build.Task ith = tasks.get(i);
+				Pair<SnapShot, Boolean> p = ith.apply(s);
 				s = p.first();
 				if (!p.second()) {
 					// Print error messages
