@@ -17,8 +17,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import wycc.lang.Build;
 import wycli.cfg.Configuration;
-import wyfs.lang.FileSystem;
+import wyfs.lang.Content;
 import wyfs.util.ZipFile;
 
 public interface Package {
@@ -38,7 +39,7 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		List<FileSystem.Root> resolve(Configuration cf) throws IOException;
+		List<ZipFile> resolve(Configuration cf) throws IOException;
 
 		/**
 		 * Get the root repository associated with this package resolver.
@@ -80,7 +81,7 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		public FileSystem.Root get(String name, Semantic.Version version) throws IOException;
+		public ZipFile get(String name, Semantic.Version version) throws IOException;
 
 		/**
 		 * Put a given package into this repository.

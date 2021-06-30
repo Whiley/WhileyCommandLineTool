@@ -17,6 +17,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.List;
+import java.util.function.Predicate;
+
+import wycc.lang.Filter;
 import wycc.lang.Path;
 
 public class Content {
@@ -63,174 +67,59 @@ public class Content {
 	}
 
 	/**
-	 * Provide a simple mechanism for printing content to an output stream. This is
-	 * mostly useful for debugging.
+	 * Provides a general mechanism for reading content from a given source.
 	 *
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface Printable<T> extends Type<T> {
+	public interface Source<T> {
 		/**
-		 * Print this content type to a given input stream.
+		 * Get a given piece of content from this source.
 		 *
-		 * @param output
-		 * @throws IOException
-		 */
-		public void print(PrintStream output, T content) throws IOException;
-	}
-
-	/**
-	 * Represents a generic binary file of unknown content. This is useful for
-	 * associating anything which the given content registry does not recognise.
-	 */
-	public static Content.Type<byte[]> BinaryFile = new Content.Type<byte[]>() {
-
-		@Override
-		public String getSuffix() {
-			return "(bin)";
-		}
-
-		@Override
-		public void write(OutputStream output, byte[] bytes) throws IOException {
-			output.write(bytes);
-		}
-
-		@Override
-		public byte[] read(Path id, InputStream input) throws IOException {
-			throw new UnsupportedOperationException();
-		}
-
-	};
-
-	/**
-	 * A generic mechanism for selecting a subset of content based on a path
-	 * filter and a content type. For example, one might specify an
-	 * includes="whiley/**\/*.whiley" filter on a given root to identify which
-	 * source files should be compiled. This would be implemented using either a
-	 * content or path filter.
-	 *
-	 * @author David J. Pearce
-	 *
-	 * @param <T>
-	 */
-	public interface Filter<T> {
-
-		/**
-		 * Check whether a given entry is matched by this filter.
-		 *
-		 * @param entry
-		 *            --- entry to test.
-		 * @return --- entry (retyped) if it matches, otherwise null.
-		 */
-		public boolean matches(Path id, Content.Type<T> ct);
-
-		/**
-		 * Check whether a given subpath is matched by this filter. A matching
-		 * subpath does not necessarily identify an exact match; rather, it may
-		 * be an enclosing folder.
-		 *
-		 * @param id
+		 * @param <T>
+		 * @param kind
+		 * @param p
 		 * @return
 		 */
-		public boolean matchesSubpath(Path id);
+		public <S extends T> S get(Class<S> kind, Path p);
+
+		/**
+		 * Find all content matching a given filter.
+		 *
+		 * @param <S>
+		 * @param kind
+		 * @param f
+		 * @return
+		 */
+		public <S extends T> List<S> match(Class<S> kind, Filter f);
+
+		/**
+		 * Find all content matching a given predicate.
+		 *
+		 * @param <S>
+		 * @param kind
+		 * @param f
+		 * @return
+		 */
+		public <S extends T> List<S> match(Class<S> kind, Predicate<S> f);
 	}
 
 	/**
-	 * Construct a content filter from a path filter and a content type.
+	 * Provides a general mechanism for writing content into a given source.
 	 *
-	 * @param filter --- path filter
-	 * @param contentType
-	 * @return
-	 */
-	public static <T> Filter<T> filter(final wycc.lang.Filter filter, final Content.Type<T> contentType) {
-		return new Filter<T>() {
-			@Override
-			public boolean matches(Path id, Content.Type<T> ct) {
-				return ct == contentType && filter.matches(id);
-			}
-			@Override
-			public boolean matchesSubpath(Path id) {
-				return filter.matches(id);
-			}
-			@Override
-			public String toString() {
-				return filter.toString();
-			}
-		};
-	}
-
-	/**
-	 * Construct a content filter from a string representing a path filter and a content type.
+	 * @author David J. Pearce
 	 *
-	 * @param filter --- path filter
-	 * @param contentType
-	 * @return
 	 */
-	public static <T> Filter<T> filter(final String pathFilter, final Content.Type<T> contentType) {
-		final wycc.lang.Filter filter = wycc.lang.Filter.fromString(pathFilter);
-		return new Filter<T>() {
-			@Override
-			public boolean matches(Path id, Content.Type<T> ct) {
-				return ct == contentType && filter.matches(id);
-			}
-			@Override
-			public boolean matchesSubpath(Path id) {
-				return filter.matches(id);
-			}
-			@Override
-			public String toString() {
-				return filter.toString();
-			}
-		};
-	}
-	/**
-	 * Combine two filters together produce one filter whose items must be
-	 * matched by at least one of the original filters.
-	 *
-	 * @param f1
-	 * @param f2
-	 * @return
-	 */
-	public static <T> Filter<T> or(final Filter<T> f1, final Filter<T> f2) {
-		return new Filter<T>() {
-			@Override
-			public boolean matches(Path id, Content.Type<T> ct) {
-				return f1.matches(id, ct) || f2.matches(id, ct);
-			}
-			@Override
-			public boolean matchesSubpath(Path id) {
-				return f1.matchesSubpath(id) || f2.matchesSubpath(id);
-			}
-			@Override
-			public String toString() {
-				return f1.toString() + "|" + f2.toString();
-			}
-		};
-	}
-
-	/**
-	 * Combine two filters together produce one filter whose items must be
-	 * matched by both of the original filters.
-	 *
-	 * @param f1
-	 * @param f2
-	 * @return
-	 */
-	public static <T> Filter<T> and(final Filter<T> f1, final Filter<T> f2) {
-		return new Filter<T>() {
-			@Override
-			public boolean matches(Path id, Content.Type<T> ct) {
-				return f1.matches(id, ct) && f2.matches(id, ct);
-			}
-			@Override
-			public boolean matchesSubpath(Path id) {
-				return f1.matchesSubpath(id) && f2.matchesSubpath(id);
-			}
-			@Override
-			public String toString() {
-				return f1.toString() + "&" + f2.toString();
-			}
-		};
+	public interface Sink<T> {
+		/**
+		 * Write a given piece of content into this sink,
+		 *
+		 * @param <T>
+		 * @param kind
+		 * @param p
+		 * @param value
+		 */
+		public void put(Path p, T value);
 	}
 
 	/**

@@ -31,9 +31,8 @@ import wycli.lang.Package;
 import wycli.lang.Plugin;
 import wycli.util.CommandParser;
 import wyfs.lang.Content;
-import wyfs.lang.FileSystem;
 import wyfs.util.DefaultContentRegistry;
-import wyfs.util.FileRepository;
+import wyfs.util.DirectoryRoot;
 import wycc.util.Pair;
 import wycc.lang.Path;
 import wyfs.util.ZipFile;
@@ -76,12 +75,12 @@ public class Main implements Command.Environment {
 	 * Global repository where generic information is stored (e.g. email address, access token, etc) that doesn't want
 	 * to be stored in e.g. version control and/or applies across multiple projects.
 	 */
-	private final FileRepository globalRepository;
+	private final DirectoryRoot globalDir;
 	/**
 	 * The repository matching files on the file system.  This is used for reading config files, identifying files which
 	 * have changed and synching with the main repository.
 	 */
-	private final FileRepository localRepository;
+	private final DirectoryRoot workingDir;
 	/**
 	 * The main repository for storing build artifacts and source files which is properly versioned.
 	 */
@@ -91,10 +90,10 @@ public class Main implements Command.Environment {
 	 */
 	private final Schema localSchema;
 
-	public Main(Plugin.Environment env, FileRepository globalRepo, FileRepository localRepo, Build.Repository buildRepo) {
+	public Main(Plugin.Environment env, DirectoryRoot globalRepo, DirectoryRoot localRepo, Build.Repository buildRepo) {
 		this.env = env;
-		this.globalRepository = globalRepo;
-		this.localRepository = localRepo;
+		this.globalDir = globalRepo;
+		this.workingDir = localRepo;
 		this.buildRepository = buildRepo;
 		this.localSchema = constructSchema();
 		// Setup package resolver
@@ -124,7 +123,7 @@ public class Main implements Command.Environment {
 
 	@Override
 	public Build.Repository getRepository() {
-		return localRepository;
+		throw new IllegalArgumentException("GOT HERE");
 	}
 
 	@Override
@@ -132,7 +131,7 @@ public class Main implements Command.Environment {
 		ArrayList<Configuration> files = new ArrayList<>();
 		// Pull out all configuration files upto the root
 		while (path != null) {
-			ConfigFile cf = localRepository.get().get(path.append("wy"), ConfigFile.class);
+			ConfigFile cf = workingDir.get(ConfigFile.class, path.append("wy"));
 			if (cf != null) {
 				Configuration c = cf.toConfiguration(localSchema, false);
 				files.add(c);
@@ -160,6 +159,11 @@ public class Main implements Command.Environment {
 
 	public void setMeter(Build.Meter meter) {
 		this.meter = meter;
+	}
+
+	public void flush() throws IOException {
+		workingDir.flush();
+		globalDir.flush();
 	}
 
 	private Schema constructSchema() {
@@ -225,6 +229,8 @@ public class Main implements Command.Environment {
 				e.printStackTrace();
 			}
 			exitCode = 2;
+		} finally {
+			env.flush();
 		}
 		System.exit(exitCode);
 	}
@@ -241,11 +247,11 @@ public class Main implements Command.Environment {
 	 */
 	private static Pair<Main, Path> constructMainEnvironment(Logger logger) throws IOException {
 		// Determine system-wide directory
-		FileRepository systemRoot = determineSystemRoot();
+		DirectoryRoot SystemDir = determineSystemRoot();
 		// Determine user-wide directory
-		FileRepository globalRoot = determineGlobalRoot(logger);
+		DirectoryRoot globalDir = determineGlobalRoot(logger);
 		// Read the system configuration file
-		Configuration system = readConfigFile(systemRoot, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
+		Configuration system = readConfigFile(SystemDir, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
 		// Construct plugin environment and activate plugins
 		Plugin.Environment env = activatePlugins(system, logger);
 		// Register content type for configuration files
@@ -256,12 +262,12 @@ public class Main implements Command.Environment {
 		Path pid = lrp.second();
 		// Construct build directory
 		File buildDir = determineBuildDirectory(localDir, logger);
-		// Construct local root
-		FileRepository localRoot = new FileRepository(env, localDir);
+		// Construct workding directory
+		DirectoryRoot workingDir = new DirectoryRoot(env, localDir);
 		// Determine build root
-		FileRepository buildRoot = new FileRepository(env, buildDir);
+		Build.Repository buildRoot = new DirectoryRoot(env, buildDir);
 		// Construct command environment!
-		Main menv = new Main(env, globalRoot, localRoot, buildRoot);
+		Main menv = new Main(env, globalDir, workingDir, buildRoot);
 		//
 		return new Pair<>(menv, pid);
 	}
@@ -274,13 +280,13 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static FileRepository determineSystemRoot() throws IOException {
+	private static DirectoryRoot determineSystemRoot() throws IOException {
 		String whileyhome = System.getenv("WHILEYHOME");
 		if (whileyhome == null) {
 			System.err.println("error: WHILEYHOME environment variable not set");
 			System.exit(-1);
 		}
-		return new FileRepository(BOOT_REGISTRY, new File(whileyhome));
+		return new DirectoryRoot(BOOT_REGISTRY, new File(whileyhome));
 	}
 
 	/**
@@ -291,14 +297,14 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static FileRepository determineGlobalRoot(Logger logger) throws IOException {
+	private static DirectoryRoot determineGlobalRoot(Logger logger) throws IOException {
 		String userhome = System.getProperty("user.home");
 		File whileydir = new File(userhome + File.separator + ".whiley");
 		if(!whileydir.exists()) {
 			logger.logTimedMessage("mkdir " + whileydir.toString(), 0, 0);
 			whileydir.mkdirs();
 		}
-		return new FileRepository(BOOT_REGISTRY, whileydir);
+		return new DirectoryRoot(BOOT_REGISTRY, whileydir);
 	}
 
 	/**
@@ -414,12 +420,12 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(FileRepository root, Path id, Logger logger, Configuration.Schema... schemas) throws IOException {
+	public static Configuration readConfigFile(DirectoryRoot root, Path id, Logger logger, Configuration.Schema... schemas) throws IOException {
 		// Combine schemas together
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
 		try {
 			// Read the configuration file
-			ConfigFile cf = root.get().get(id, ConfigFile.class);
+			ConfigFile cf = root.get(ConfigFile.class, id);
 			// Log the event
 			logger.logTimedMessage("Read " + root.getDirectory() + "/" + id + ".toml", 0, 0);
 			// Construct configuration according to given schema
