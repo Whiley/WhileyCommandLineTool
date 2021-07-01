@@ -191,7 +191,7 @@ public class Build implements Command {
 	public static void printSyntacticMarkers(PrintStream output, SyntacticItem.Marker marker, SourceFile... sources) {
 		// Identify enclosing source file
 		SourceFile source = getSourceEntry(marker.getSource(), sources);
-		String filename = source.getID().toString();
+		String filename = source.getPath().toString();
 		//
 		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
 		// Read the enclosing line so we can print it
@@ -240,7 +240,7 @@ public class Build implements Command {
 	private static SourceFile getSourceEntry(Path id, SourceFile... sources) {
 		//
 		for (SourceFile s : sources) {
-			if (id.equals(s.getID())) {
+			if (id.equals(s.getPath())) {
 				return s;
 			}
 		}

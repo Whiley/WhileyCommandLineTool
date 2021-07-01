@@ -18,9 +18,9 @@ import java.util.List;
 import java.util.Set;
 
 import wycc.lang.Build;
+import wycc.lang.Content;
+import wycc.util.ZipFile;
 import wycli.cfg.Configuration;
-import wyfs.lang.Content;
-import wyfs.util.ZipFile;
 
 public interface Package {
 

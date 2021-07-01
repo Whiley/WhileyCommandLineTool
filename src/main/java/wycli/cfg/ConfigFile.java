@@ -24,7 +24,6 @@ import java.util.Set;
 import wycc.lang.*;
 import wycc.util.AbstractCompilationUnit;
 import wycc.util.AbstractSyntacticItem;
-import wyfs.lang.Content;
 
 public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements Build.Artifact {
 	// =========================================================================
@@ -86,7 +85,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 	}
 
 	@Override
-	public Path getID() {
+	public Path getPath() {
 		return id;
 	}
 

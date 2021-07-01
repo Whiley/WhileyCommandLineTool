@@ -18,12 +18,12 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import wycc.lang.Build;
+import wycc.lang.Content;
 import wycc.lang.Build.Repository;
 import wycc.lang.Build.Meter;
 import wycc.lang.Path;
 import wycc.util.Logger;
 import wycli.cfg.Configuration;
-import wyfs.lang.Content;
 
 /**
  * A command which can be executed (e.g. from the command-line)

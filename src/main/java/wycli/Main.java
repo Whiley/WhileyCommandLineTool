@@ -21,7 +21,9 @@ import java.util.*;
 import wycc.lang.Filter;
 import wycc.util.AbstractCompilationUnit.Value;
 import wycc.lang.Build;
+import wycc.lang.Content;
 import wycc.lang.SyntacticException;
+import wycc.util.DirectoryRoot;
 import wycc.util.Logger;
 import wycli.cfg.*;
 import wycli.cfg.Configuration.Schema;
@@ -30,12 +32,9 @@ import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Plugin;
 import wycli.util.CommandParser;
-import wyfs.lang.Content;
-import wyfs.util.DefaultContentRegistry;
-import wyfs.util.DirectoryRoot;
 import wycc.util.Pair;
+import wycc.util.ZipFile;
 import wycc.lang.Path;
-import wyfs.util.ZipFile;
 
 /**
  * Provides a command-line interface to the Whiley Compiler Collection. This is
@@ -404,7 +403,7 @@ public class Main implements Command.Environment {
 	 * Used for reading the various configuration files prior to instantiating the
 	 * main tool itself.
 	 */
-	public static Content.Registry BOOT_REGISTRY = new DefaultContentRegistry()
+	public static Content.Registry BOOT_REGISTRY = new Content.DefaultRegistry()
 			.register(ConfigFile.ContentType, "toml").register(ZipFile.ContentType, "zip");
 
 	/**
