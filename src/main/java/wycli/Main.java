@@ -20,6 +20,7 @@ import java.util.*;
 
 import wycc.lang.Filter;
 import wycc.util.AbstractCompilationUnit.Value;
+import wycc.util.ByteRepository;
 import wycc.lang.Build;
 import wycc.lang.Content;
 import wycc.lang.SyntacticException;
@@ -83,17 +84,17 @@ public class Main implements Command.Environment {
 	/**
 	 * The main repository for storing build artifacts and source files which is properly versioned.
 	 */
-	private final Build.Repository buildRepository;
+	private final Build.Repository repository;
 	/**
 	 *
 	 */
 	private final Schema localSchema;
 
-	public Main(Plugin.Environment env, DirectoryRoot globalRepo, DirectoryRoot localRepo, Build.Repository buildRepo) {
+	public Main(Plugin.Environment env, DirectoryRoot globalDir, DirectoryRoot localDir, Build.Repository repo) {
 		this.env = env;
-		this.globalDir = globalRepo;
-		this.workingDir = localRepo;
-		this.buildRepository = buildRepo;
+		this.globalDir = globalDir;
+		this.workingDir = localDir;
+		this.repository = repo;
 		this.localSchema = constructSchema();
 		// Setup package resolver
 		//this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, env, repository));
@@ -122,7 +123,7 @@ public class Main implements Command.Environment {
 
 	@Override
 	public Build.Repository getRepository() {
-		throw new IllegalArgumentException("GOT HERE");
+		return repository;
 	}
 
 	@Override
@@ -161,6 +162,12 @@ public class Main implements Command.Environment {
 	}
 
 	public void flush() throws IOException {
+		Filter f = Filter.fromString("**/*");
+		// Somehow here we need to take files out of the repository and put them into
+		// the working dir.
+		for (Build.Artifact b : repository.match(Build.Artifact.class, f)) {
+			workingDir.put(b.getPath(), b);
+		}
 		workingDir.flush();
 		globalDir.flush();
 	}
@@ -264,7 +271,7 @@ public class Main implements Command.Environment {
 		// Construct workding directory
 		DirectoryRoot workingDir = new DirectoryRoot(env, localDir);
 		// Determine build root
-		Build.Repository buildRoot = new DirectoryRoot(env, buildDir);
+		Build.Repository buildRoot = new ByteRepository();
 		// Construct command environment!
 		Main menv = new Main(env, globalDir, workingDir, buildRoot);
 		//

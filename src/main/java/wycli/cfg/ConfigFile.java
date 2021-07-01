@@ -66,27 +66,32 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 	// =========================================================================
 	// Constructors
 	// =========================================================================
-	private final Path id;
+	private final Path path;
 	/**
 	 * The list of declarations which make up this configuration.
 	 */
 	private Tuple<Declaration> declarations;
 
-	public ConfigFile(Path id) {
+	public ConfigFile(Path path) {
 		this.declarations = new Tuple<>();
-		this.id = id;
+		this.path = path;
 	}
 
-	public ConfigFile(Path id, Tuple<Declaration> declarations) {
+	public ConfigFile(Path path, Tuple<Declaration> declarations) {
 		this.declarations = declarations;
 		//
 		allocate(declarations);
-		this.id = id;
+		this.path = path;
 	}
 
 	@Override
 	public Path getPath() {
-		return id;
+		return path;
+	}
+
+	@Override
+	public Content.Type<ConfigFile> getContentType() {
+		return ConfigFile.ContentType;
 	}
 
 	public static interface Declaration extends SyntacticItem {
