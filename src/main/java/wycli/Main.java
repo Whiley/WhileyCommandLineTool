@@ -72,16 +72,6 @@ public class Main implements Command.Environment {
 	 */
 	private final Plugin.Environment env;
 	/**
-	 * Global repository where generic information is stored (e.g. email address, access token, etc) that doesn't want
-	 * to be stored in e.g. version control and/or applies across multiple projects.
-	 */
-	private final DirectoryRoot globalDir;
-	/**
-	 * The repository matching files on the file system.  This is used for reading config files, identifying files which
-	 * have changed and synching with the main repository.
-	 */
-	private final DirectoryRoot workingDir;
-	/**
 	 * The main repository for storing build artifacts and source files which is properly versioned.
 	 */
 	private final Build.Repository repository;
@@ -90,14 +80,13 @@ public class Main implements Command.Environment {
 	 */
 	private final Schema localSchema;
 
-	public Main(Plugin.Environment env, DirectoryRoot globalDir, DirectoryRoot localDir, Build.Repository repo) {
+	public Main(Plugin.Environment env, Iterable<Build.Artifact> entries) {
 		this.env = env;
-		this.globalDir = globalDir;
-		this.workingDir = localDir;
-		this.repository = repo;
+		this.repository = new ByteRepository(entries);
 		this.localSchema = constructSchema();
 		// Setup package resolver
-		//this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, env, repository));
+		// this.resolver = new StdPackageResolver(this, new
+		// RemotePackageRepository(this, env, repository));
 		this.resolver = null;
 	}
 
@@ -128,10 +117,11 @@ public class Main implements Command.Environment {
 
 	@Override
 	public Configuration get(Path path) {
+		System.out.println("GOT: " + repository);
 		ArrayList<Configuration> files = new ArrayList<>();
 		// Pull out all configuration files upto the root
 		while (path != null) {
-			ConfigFile cf = workingDir.get(ConfigFile.class, path.append("wy"));
+			ConfigFile cf = repository.get(ConfigFile.class, path.append("wy"));
 			if (cf != null) {
 				Configuration c = cf.toConfiguration(localSchema, false);
 				files.add(c);
@@ -161,17 +151,6 @@ public class Main implements Command.Environment {
 		this.meter = meter;
 	}
 
-	public void flush() throws IOException {
-		Filter f = Filter.fromString("**/*");
-		// Somehow here we need to take files out of the repository and put them into
-		// the working dir.
-		for (Build.Artifact b : repository.match(Build.Artifact.class, f)) {
-			workingDir.put(b.getPath(), b);
-		}
-		workingDir.flush();
-		globalDir.flush();
-	}
-
 	private Schema constructSchema() {
 		List<Command.Platform> buildPlatforms = getCommandPlatforms();
 		List<Command.Descriptor> cmdDescriptors = getCommandDescriptors();
@@ -196,15 +175,45 @@ public class Main implements Command.Environment {
 	// ==================================================================
 
 	public static void main(String[] args) throws Exception {
-		int exitCode;
-		// Construct environment and determine path
-		Pair<Main, Path> mp = constructMainEnvironment(BOOT_LOGGER);
-		Main env = mp.first();
-		Path path = mp.second();
+		Logger logger = BOOT_LOGGER;
+		// Determine system-wide directory. This contains configuration relevant to the
+		// entire ecosystem, such as the set of active plugins.
+		DirectoryRoot SystemDir = determineSystemRoot();
+		// Read the system configuration file
+		Configuration system = readConfigFile(SystemDir, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
+		// Determine user-wide directory
+		DirectoryRoot globalDir = determineGlobalRoot(logger);
+		// Construct plugin environment and activate plugins
+		Plugin.Environment penv = activatePlugins(system, logger);
+		// Register content type for configuration files
+		penv.register(Content.Type.class, ConfigFile.ContentType);
+		// Determine top-level directory and relative path
+		Pair<File, Path> lrp = determineLocalRootDirectory();
+		File localDir = lrp.first();
+		Path path = lrp.second();
+		// Construct build directory
+		File buildDir = determineBuildDirectory(localDir, logger);
+		// Construct workding directory
+		DirectoryRoot dir = new DirectoryRoot(penv, localDir);
+		// Construct command environment!
+		Main menv = new Main(penv, dir);
+		// Execute the given command
+		int exitCode = exec(menv, path, args);
+		// Write back all artifacts to the working director
+		for(Build.Artifact b : menv.getRepository().last()) {
+			dir.put(b.getPath(), b);
+		}
+		// Flush working directory to disk
+		dir.flush();
+		// Done
+		System.exit(exitCode);
+	}
+
+	public static int exec(Main menv, Path path, String[] args) {
 		// Add default descriptors
-		env.getCommandDescriptors().addAll(Arrays.asList(DEFAULT_COMMANDS));
+		menv.getCommandDescriptors().addAll(Arrays.asList(DEFAULT_COMMANDS));
 		// Construct environment and execute arguments
-		Command.Descriptor descriptor = wycli.commands.Root.DESCRIPTOR(env.getCommandDescriptors());
+		Command.Descriptor descriptor = wycli.commands.Root.DESCRIPTOR(menv.getCommandDescriptors());
 		// Parse the given command-line
 		Command.Template template = new CommandParser(descriptor).parse(args);
 		// Apply verbose setting
@@ -212,71 +221,35 @@ public class Main implements Command.Environment {
 		int profile = template.getOptions().get("profile", Integer.class);
 		if(verbose || profile > 0) {
 			// Configure environment
-			env.setLogger(BOOT_LOGGER);
-			env.setMeter(new Meter("Build", BOOT_LOGGER, profile));
+			menv.setLogger(BOOT_LOGGER);
+			menv.setMeter(new Meter("Build", BOOT_LOGGER, profile));
 		}
 		// Done
 		try {
 			// Create command instance
-			Command instance = descriptor.initialise(env);
+			Command instance = descriptor.initialise(menv);
 			// Execute command
 			boolean ec = instance.execute(path,template);
 			// Done
-			exitCode = ec ? 0 : 1;
+			return ec ? 0 : 1;
 		} catch(SyntacticException e) {
 			e.outputSourceError(System.err, false);
 			if (verbose) {
 				printStackTrace(System.err, e);
 			}
-			exitCode = 1;
+			return 1;
 		} catch (Exception e) {
 			System.err.println("Internal failure: " + e.getMessage());
 			if(verbose) {
 				e.printStackTrace();
 			}
-			exitCode = 2;
-		} finally {
-			env.flush();
+			return 2;
 		}
-		System.exit(exitCode);
 	}
 
 	// ==================================================================
 	// Helpers
 	// ==================================================================
-
-	/**
-	 * Construct a command environment from the local file system.
-	 * @param logger
-	 * @return
-	 * @throws IOException
-	 */
-	private static Pair<Main, Path> constructMainEnvironment(Logger logger) throws IOException {
-		// Determine system-wide directory
-		DirectoryRoot SystemDir = determineSystemRoot();
-		// Determine user-wide directory
-		DirectoryRoot globalDir = determineGlobalRoot(logger);
-		// Read the system configuration file
-		Configuration system = readConfigFile(SystemDir, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
-		// Construct plugin environment and activate plugins
-		Plugin.Environment env = activatePlugins(system, logger);
-		// Register content type for configuration files
-		env.register(Content.Type.class, ConfigFile.ContentType);
-		// Determine top-level directory and relative path
-		Pair<File, Path> lrp = determineLocalRootDirectory();
-		File localDir = lrp.first();
-		Path pid = lrp.second();
-		// Construct build directory
-		File buildDir = determineBuildDirectory(localDir, logger);
-		// Construct workding directory
-		DirectoryRoot workingDir = new DirectoryRoot(env, localDir);
-		// Determine build root
-		Build.Repository buildRoot = new ByteRepository();
-		// Construct command environment!
-		Main menv = new Main(env, globalDir, workingDir, buildRoot);
-		//
-		return new Pair<>(menv, pid);
-	}
 
 	/**
 	 * Determine the system root. That is, the installation directory for the

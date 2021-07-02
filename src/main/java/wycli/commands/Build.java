@@ -135,9 +135,9 @@ public class Build implements Command {
 		// Runs tasks
 		repository.apply(pipeline);
 		// Look for error messages
-//		for (wybs.lang.Build.Task task : project.getTasks()) {
-//			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
-//		}
+		for (wybs.lang.Build.Task task : project.getTasks()) {
+			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
+		}
 		// Success if all pipeline stages completed
 		return (pipeline.completed == tasks.size());
 	}
