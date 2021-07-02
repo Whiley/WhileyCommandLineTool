@@ -53,6 +53,11 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		public String getSuffix() {
 			return "toml";
 		}
+
+		@Override
+		public boolean includes(Class<?> kind) {
+			return kind == ConfigFile.class;
+		}
 	};
 
 	// =========================================================================
