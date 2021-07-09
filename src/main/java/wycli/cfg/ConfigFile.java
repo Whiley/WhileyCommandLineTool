@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		@Override
 		public ConfigFile read(Path id, InputStream input) throws IOException {
 			ConfigFileLexer lexer = new ConfigFileLexer(input);
-			ConfigFileParser parser = new ConfigFileParser(id,lexer.scan());
+			ConfigFileParser parser = new ConfigFileParser(id, lexer.scan());
 			return parser.read();
 		}
 
@@ -99,6 +100,10 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		return ConfigFile.ContentType;
 	}
 
+	public List<? extends Build.Artifact> getSourceArtifacts() {
+		return Collections.EMPTY_LIST;
+	}
+	
 	public static interface Declaration extends SyntacticItem {
 
 	}

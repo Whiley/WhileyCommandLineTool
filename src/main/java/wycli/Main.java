@@ -117,7 +117,6 @@ public class Main implements Command.Environment {
 
 	@Override
 	public Configuration get(Path path) {
-		System.out.println("GOT: " + repository);
 		ArrayList<Configuration> files = new ArrayList<>();
 		// Pull out all configuration files upto the root
 		while (path != null) {

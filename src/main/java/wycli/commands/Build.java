@@ -135,11 +135,25 @@ public class Build implements Command {
 		// Runs tasks
 		repository.apply(pipeline);
 		// Look for error messages
-		for (wybs.lang.Build.Task task : project.getTasks()) {
-			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
+		// At this point we need to figure out what the generated files are, and from
+		// them determine the sources which generated them.
+		for (wycc.lang.Build.Task task : tasks) {
+			Path target = task.getTarget();
+			wycc.lang.Build.Artifact binary = repository.get(task.getContentType(), target);
+			printSyntacticMarkers(syserr, binary);
 		}
+//		for (wybs.lang.Build.Task task : project.getTasks()) {
+//			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
+//		}
 		// Success if all pipeline stages completed
-		return (pipeline.completed == tasks.size());
+		if(pipeline.completed == tasks.size()) {
+			// Build succeeded
+			return true;
+		} else {
+			syserr.println("Build failed.");
+			// Build failure
+			return false;
+		}
 	}
 
 	private static class Pipeline implements Function<SnapShot,SnapShot> {
@@ -173,6 +187,16 @@ public class Build implements Command {
 	 * @param executor
 	 * @throws IOException
 	 */
+	public static void printSyntacticMarkers(PrintStream output, wycc.lang.Build.Artifact target) throws IOException {
+		// Extract all syntactic markers from entries in the build graph
+		List<SyntacticItem.Marker> items = extractSyntacticMarkers(target);
+		// For each marker, print out error messages appropriately
+		for (int i = 0; i != items.size(); ++i) {
+			// Log the error message
+			printSyntacticMarkers(output, items.get(i), target.getSourceArtifacts());
+		}
+	}
+
 	public static void printSyntacticMarkers(PrintStream output, SyntacticHeap target, SourceFile... sources) throws IOException {
 		// Extract all syntactic markers from entries in the build graph
 		List<SyntacticItem.Marker> items = extractSyntacticMarkers(target);
@@ -182,7 +206,7 @@ public class Build implements Command {
 			printSyntacticMarkers(output, items.get(i), sources);
 		}
 	}
-
+	
 	/**
 	 * Print out an individual syntactic markers.
 	 *
@@ -207,6 +231,26 @@ public class Build implements Command {
 		}
 	}
 
+	public static void printSyntacticMarkers(PrintStream output, SyntacticItem.Marker marker,
+			List<? extends wycc.lang.Build.Artifact> sources) {
+		// Identify enclosing source file
+		SourceFile source = getSourceEntry(marker.getSource(), sources);
+		String filename = source.getPath().toString();
+		//
+		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
+		// Read the enclosing line so we can print it
+		SourceFile.Line line = source.getEnclosingLine(span.getStart().get().intValue());
+		// Sanity check we found it
+		if (line != null) {
+			// print the error message
+			output.println(filename + ":" + line.getNumber() + ": " + marker.getMessage());
+			// Finally print the line highlight
+			printLineHighlight(output, span, line);
+		} else {
+			output.println(filename + ":?: " + marker.getMessage());
+		}
+	}
+	
 	public static List<SyntacticItem.Marker> extractSyntacticMarkers(wycc.lang.Build.Artifact... binaries) throws IOException {
 		List<SyntacticItem.Marker> annotated = new ArrayList<>();
 		//
@@ -247,6 +291,17 @@ public class Build implements Command {
 		return null;
 	}
 
+	private static SourceFile getSourceEntry(Path id, List<? extends wycc.lang.Build.Artifact> sources) {
+		//
+		for (wycc.lang.Build.Artifact s : sources) {
+			if (id.equals(s.getPath())) {
+				// FIXME: this is broken
+				return (SourceFile) s;
+			}
+		}
+		return null;
+	}
+	
 	private static void printLineHighlight(PrintStream output,
 			EnclosingLine enclosing) {
 		// NOTE: in the following lines I don't print characters
