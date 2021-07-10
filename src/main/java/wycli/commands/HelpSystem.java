@@ -22,7 +22,7 @@ import wycli.cfg.Configuration;
 import wycli.lang.Command;
 import wycc.lang.Path;
 
-public class Help implements Command {
+public class HelpSystem implements Command {
 
     public static final Configuration.Schema SCHEMA = Configuration
             .fromArray(Configuration.BOUND_INTEGER(Path.fromString("width"), "fix display width", false, 0));
@@ -61,14 +61,14 @@ public class Help implements Command {
 
         @Override
         public Command initialise(Command.Environment environment) {
-            return new Help(System.out, environment);
+            return new HelpSystem(System.out, environment);
         }
     };
     //
     private final PrintStream out;
     private final Command.Environment environment;
 
-    public Help(PrintStream out, Command.Environment environment) {
+    public HelpSystem(PrintStream out, Command.Environment environment) {
         this.environment = environment;
         this.out = out;
     }

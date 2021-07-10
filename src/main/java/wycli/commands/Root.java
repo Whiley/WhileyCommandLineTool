@@ -93,7 +93,7 @@ public class Root implements Command {
             return command.execute(path,template);
         } else {
             // Initialise command
-            Command cmd = Help.DESCRIPTOR.initialise(environment);
+            Command cmd = HelpSystem.DESCRIPTOR.initialise(environment);
             // Execute command
             return cmd.execute(path, template);
         }

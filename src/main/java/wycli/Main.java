@@ -28,7 +28,7 @@ import wycc.util.DirectoryRoot;
 import wycc.util.Logger;
 import wycli.cfg.*;
 import wycli.cfg.Configuration.Schema;
-import wycli.commands.Help;
+import wycli.commands.HelpSystem;
 import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Plugin;
@@ -53,7 +53,7 @@ public class Main implements Command.Environment {
 	public static final Path DEFAULT_REPOSITORY_PATH = Path.fromString("repository");
 
 	public static final Command.Descriptor[] DEFAULT_COMMANDS = {
-			Help.DESCRIPTOR, wycli.commands.Build.DESCRIPTOR
+			HelpSystem.DESCRIPTOR, wycli.commands.BuildSystem.DESCRIPTOR
 	};
 
 	// ========================================================================

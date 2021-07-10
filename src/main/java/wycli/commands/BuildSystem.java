@@ -31,6 +31,7 @@ import wycc.lang.SyntacticItem;
 import wycc.lang.SourceFile;
 import wycc.lang.Build.Repository;
 import wycc.lang.Build.SnapShot;
+import wycc.lang.Build;
 import wycc.lang.Build.Artifact;
 import wycc.util.AbstractCompilationUnit;
 import wycc.util.AbstractCompilationUnit.Attribute;
@@ -40,7 +41,7 @@ import wycli.cfg.Configuration.Schema;
 import wycli.lang.Command;
 import wycc.util.Pair;
 
-public class Build implements Command {
+public class BuildSystem implements Command {
 	/**
 	 * The descriptor for this command.
 	 */
@@ -73,7 +74,7 @@ public class Build implements Command {
 
 		@Override
 		public Command initialise(Command.Environment environment) {
-			return new Build(environment, System.out, System.err);
+			return new BuildSystem(environment, System.out, System.err);
 		}
 
 	};
@@ -102,7 +103,7 @@ public class Build implements Command {
 	 */
 	private final Command.Environment environment;
 
-	public Build(Command.Environment environment, OutputStream sysout, OutputStream syserr) {
+	public BuildSystem(Command.Environment environment, OutputStream sysout, OutputStream syserr) {
 		this.environment = environment;
 		this.sysout = new PrintStream(sysout);
 		this.syserr = new PrintStream(syserr);
@@ -125,7 +126,7 @@ public class Build implements Command {
 	@Override
 	public boolean execute(Path path, Template template) throws Exception {
 		Repository repository = environment.getRepository();
-		List<wycc.lang.Build.Task> tasks = new ArrayList<>();
+		List<Build.Task> tasks = new ArrayList<>();
 		// Construct tasks
 		for(Command.Platform p : environment.getCommandPlatforms()) {
 			tasks.add(p.initialise(path, environment));
@@ -137,9 +138,9 @@ public class Build implements Command {
 		// Look for error messages
 		// At this point we need to figure out what the generated files are, and from
 		// them determine the sources which generated them.
-		for (wycc.lang.Build.Task task : tasks) {
+		for (Build.Task task : tasks) {
 			Path target = task.getPath();
-			wycc.lang.Build.Artifact binary = repository.get(task.getContentType(), target);
+			Build.Artifact binary = repository.get(task.getContentType(), target);
 			printSyntacticMarkers(syserr, binary);
 		}
 		// Success if all pipeline stages completed
@@ -154,17 +155,17 @@ public class Build implements Command {
 	}
 
 	private static class Pipeline implements Function<SnapShot,SnapShot> {
-		private final List<wycc.lang.Build.Task> tasks;
+		private final List<Build.Task> tasks;
 		private int completed;
 
-		private Pipeline(List<wycc.lang.Build.Task> tasks) {
+		private Pipeline(List<Build.Task> tasks) {
 			this.tasks = tasks;
 		}
 
 		@Override
 		public SnapShot apply(SnapShot s) {
 			for (int i = 0; i != tasks.size(); ++i) {
-				wycc.lang.Build.Task ith = tasks.get(i);
+				Build.Task ith = tasks.get(i);
 				Pair<SnapShot, Boolean> p = ith.apply(s);
 				s = p.first();
 				if (!p.second()) {
@@ -184,7 +185,7 @@ public class Build implements Command {
 	 * @param executor
 	 * @throws IOException
 	 */
-	public static void printSyntacticMarkers(PrintStream output, wycc.lang.Build.Artifact target) throws IOException {
+	public static void printSyntacticMarkers(PrintStream output, Build.Artifact target) throws IOException {
 		// Extract all syntactic markers from entries in the build graph
 		List<SyntacticItem.Marker> items = extractSyntacticMarkers(target);
 		// For each marker, print out error messages appropriately
@@ -229,7 +230,7 @@ public class Build implements Command {
 	}
 
 	public static void printSyntacticMarkers(PrintStream output, SyntacticItem.Marker marker,
-			List<? extends wycc.lang.Build.Artifact> sources) {
+			List<? extends Build.Artifact> sources) {
 		// Identify enclosing source file
 		SourceFile source = getSourceEntry(marker.getSource(), sources);
 		String filename = source.getPath().toString();
@@ -248,7 +249,7 @@ public class Build implements Command {
 		}
 	}
 
-	public static List<SyntacticItem.Marker> extractSyntacticMarkers(wycc.lang.Build.Artifact... binaries) throws IOException {
+	public static List<SyntacticItem.Marker> extractSyntacticMarkers(Build.Artifact... binaries) throws IOException {
 		List<SyntacticItem.Marker> annotated = new ArrayList<>();
 		//
 		for (Artifact b : binaries) {
@@ -288,9 +289,9 @@ public class Build implements Command {
 		return null;
 	}
 
-	private static SourceFile getSourceEntry(Path id, List<? extends wycc.lang.Build.Artifact> sources) {
+	private static SourceFile getSourceEntry(Path id, List<? extends Build.Artifact> sources) {
 		//
-		for (wycc.lang.Build.Artifact s : sources) {
+		for (Build.Artifact s : sources) {
 			if (id.equals(s.getPath())) {
 				// FIXME: this is broken
 				return (SourceFile) s;
