@@ -32,6 +32,8 @@ import wycli.commands.HelpSystem;
 import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Plugin;
+import wycli.util.LocalPackageRepository;
+import wycli.util.StdPackageResolver;
 import wycli.util.CommandParser;
 import wycc.util.Pair;
 import wycc.util.ZipFile;
@@ -80,14 +82,13 @@ public class Main implements Command.Environment {
 	 */
 	private final Schema localSchema;
 
-	public Main(Plugin.Environment env, Iterable<Build.Artifact> entries) {
+	public Main(Plugin.Environment env, Iterable<Build.Artifact> entries, DirectoryRoot packageRepository)
+			throws IOException {
 		this.env = env;
 		this.repository = new ByteRepository(entries);
 		this.localSchema = constructSchema();
 		// Setup package resolver
-		// this.resolver = new StdPackageResolver(this, new
-		// RemotePackageRepository(this, env, repository));
-		this.resolver = null;
+		this.resolver = new StdPackageResolver(this, new LocalPackageRepository(this, packageRepository));
 	}
 
 	@Override
@@ -181,7 +182,7 @@ public class Main implements Command.Environment {
 		// Read the system configuration file
 		Configuration system = readConfigFile(SystemDir, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
 		// Determine user-wide directory
-		DirectoryRoot<Build.Artifact> globalDir = determineGlobalRoot(logger);
+		DirectoryRoot globalDir = determineGlobalRoot(logger);
 		// Construct plugin environment and activate plugins
 		Plugin.Environment penv = activatePlugins(system, logger);
 		// Register content type for configuration files
@@ -193,9 +194,9 @@ public class Main implements Command.Environment {
 		// Construct build directory
 		File buildDir = determineBuildDirectory(localDir, logger);
 		// Construct workding directory
-		DirectoryRoot<Build.Artifact> dir = new DirectoryRoot<>(penv, localDir);
+		DirectoryRoot dir = new DirectoryRoot(penv, localDir);
 		// Construct command environment!
-		Main menv = new Main(penv, dir);
+		Main menv = new Main(penv, dir, resolver);
 		// Execute the given command
 		int exitCode = exec(menv, path, args);
 		// Write back all artifacts to the working director
@@ -275,14 +276,14 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static DirectoryRoot<Build.Artifact> determineGlobalRoot(Logger logger) throws IOException {
+	private static DirectoryRoot determineGlobalRoot(Logger logger) throws IOException {
 		String userhome = System.getProperty("user.home");
 		File whileydir = new File(userhome + File.separator + ".whiley");
 		if (!whileydir.exists()) {
 			logger.logTimedMessage("mkdir " + whileydir.toString(), 0, 0);
 			whileydir.mkdirs();
 		}
-		return new DirectoryRoot<>(BOOT_REGISTRY, whileydir);
+		return new DirectoryRoot(BOOT_REGISTRY, whileydir);
 	}
 
 	/**
@@ -398,7 +399,8 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(DirectoryRoot<Build.Artifact> root, Path id, Logger logger, Configuration.Schema... schemas) throws IOException {
+	public static Configuration readConfigFile(DirectoryRoot root, Path id, Logger logger,
+			Configuration.Schema... schemas) throws IOException {
 		// Combine schemas together
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
 		try {

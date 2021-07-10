@@ -44,14 +44,14 @@ public class LocalPackageRepository implements Package.Repository {
 
 	protected final Command.Environment environment;
 	protected final Package.Repository parent;
-	protected final DirectoryRoot<ZipFile> root;
+	protected final DirectoryRoot root;
 
-	public LocalPackageRepository(Command.Environment environment, DirectoryRoot<ZipFile> root) throws IOException {
+	public LocalPackageRepository(Command.Environment environment, DirectoryRoot root) throws IOException {
 		this(environment,null,root);
 	}
 
 	public LocalPackageRepository(Command.Environment environment, Package.Repository parent,
-			DirectoryRoot<ZipFile> root)
+			DirectoryRoot root)
 			throws IOException {
 		this.parent = parent;
 		this.environment = environment;

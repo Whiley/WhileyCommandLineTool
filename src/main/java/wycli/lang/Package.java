@@ -39,7 +39,7 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		List<ZipFile> resolve(Configuration cf) throws IOException;
+		List<Content.Source> resolve(Configuration cf) throws IOException;
 
 		/**
 		 * Get the root repository associated with this package resolver.
