@@ -138,13 +138,10 @@ public class Build implements Command {
 		// At this point we need to figure out what the generated files are, and from
 		// them determine the sources which generated them.
 		for (wycc.lang.Build.Task task : tasks) {
-			Path target = task.getTarget();
+			Path target = task.getPath();
 			wycc.lang.Build.Artifact binary = repository.get(task.getContentType(), target);
 			printSyntacticMarkers(syserr, binary);
 		}
-//		for (wybs.lang.Build.Task task : project.getTasks()) {
-//			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
-//		}
 		// Success if all pipeline stages completed
 		if(pipeline.completed == tasks.size()) {
 			// Build succeeded
@@ -206,7 +203,7 @@ public class Build implements Command {
 			printSyntacticMarkers(output, items.get(i), sources);
 		}
 	}
-	
+
 	/**
 	 * Print out an individual syntactic markers.
 	 *
@@ -250,7 +247,7 @@ public class Build implements Command {
 			output.println(filename + ":?: " + marker.getMessage());
 		}
 	}
-	
+
 	public static List<SyntacticItem.Marker> extractSyntacticMarkers(wycc.lang.Build.Artifact... binaries) throws IOException {
 		List<SyntacticItem.Marker> annotated = new ArrayList<>();
 		//
@@ -300,35 +297,6 @@ public class Build implements Command {
 			}
 		}
 		return null;
-	}
-	
-	private static void printLineHighlight(PrintStream output,
-			EnclosingLine enclosing) {
-		// NOTE: in the following lines I don't print characters
-		// individually. The reason for this is that it messes up the
-		// ANT task output.
-		String str = enclosing.lineText;
-
-		if (str.length() > 0 && str.charAt(str.length() - 1) == '\n') {
-			output.print(str);
-		} else {
-			// this must be the very last line of output and, in this
-			// particular case, there is no new-line character provided.
-			// Therefore, we need to provide one ourselves!
-			output.println(str);
-		}
-		str = "";
-		for (int i = 0; i < enclosing.columnStart(); ++i) {
-			if (enclosing.lineText.charAt(i) == '\t') {
-				str += "\t";
-			} else {
-				str += " ";
-			}
-		}
-		for (int i = enclosing.columnStart(); i <= enclosing.columnEnd(); ++i) {
-			str += "^";
-		}
-		output.println(str);
 	}
 
 	private static void printLineHighlight(PrintStream output,
