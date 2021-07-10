@@ -20,7 +20,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
@@ -34,13 +33,17 @@ import wycc.lang.Build.SnapShot;
 import wycc.lang.Build;
 import wycc.lang.Build.Artifact;
 import wycc.util.AbstractCompilationUnit;
-import wycc.util.AbstractCompilationUnit.Attribute;
 import wycc.util.AbstractCompilationUnit.Attribute.Span;
 import wycli.cfg.Configuration;
 import wycli.cfg.Configuration.Schema;
 import wycli.lang.Command;
 import wycc.util.Pair;
 
+/**
+ *
+ * @author David J. Pearce
+ *
+ */
 public class BuildSystem implements Command {
 	/**
 	 * The descriptor for this command.

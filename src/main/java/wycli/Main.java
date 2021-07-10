@@ -120,7 +120,7 @@ public class Main implements Command.Environment {
 		ArrayList<Configuration> files = new ArrayList<>();
 		// Pull out all configuration files upto the root
 		while (path != null) {
-			ConfigFile cf = repository.get(ConfigFile.class, path.append("wy"));
+			ConfigFile cf = repository.get(ConfigFile.ContentType, path.append("wy"));
 			if (cf != null) {
 				Configuration c = cf.toConfiguration(localSchema, false);
 				files.add(c);
@@ -181,7 +181,7 @@ public class Main implements Command.Environment {
 		// Read the system configuration file
 		Configuration system = readConfigFile(SystemDir, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
 		// Determine user-wide directory
-		DirectoryRoot globalDir = determineGlobalRoot(logger);
+		DirectoryRoot<Build.Artifact> globalDir = determineGlobalRoot(logger);
 		// Construct plugin environment and activate plugins
 		Plugin.Environment penv = activatePlugins(system, logger);
 		// Register content type for configuration files
@@ -193,7 +193,7 @@ public class Main implements Command.Environment {
 		// Construct build directory
 		File buildDir = determineBuildDirectory(localDir, logger);
 		// Construct workding directory
-		DirectoryRoot dir = new DirectoryRoot(penv, localDir);
+		DirectoryRoot<Build.Artifact> dir = new DirectoryRoot<>(penv, localDir);
 		// Construct command environment!
 		Main menv = new Main(penv, dir);
 		// Execute the given command
@@ -275,14 +275,14 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static DirectoryRoot determineGlobalRoot(Logger logger) throws IOException {
+	private static DirectoryRoot<Build.Artifact> determineGlobalRoot(Logger logger) throws IOException {
 		String userhome = System.getProperty("user.home");
 		File whileydir = new File(userhome + File.separator + ".whiley");
-		if(!whileydir.exists()) {
+		if (!whileydir.exists()) {
 			logger.logTimedMessage("mkdir " + whileydir.toString(), 0, 0);
 			whileydir.mkdirs();
 		}
-		return new DirectoryRoot(BOOT_REGISTRY, whileydir);
+		return new DirectoryRoot<>(BOOT_REGISTRY, whileydir);
 	}
 
 	/**
@@ -398,12 +398,12 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Configuration readConfigFile(DirectoryRoot root, Path id, Logger logger, Configuration.Schema... schemas) throws IOException {
+	public static Configuration readConfigFile(DirectoryRoot<Build.Artifact> root, Path id, Logger logger, Configuration.Schema... schemas) throws IOException {
 		// Combine schemas together
 		Configuration.Schema schema = Configuration.toCombinedSchema(schemas);
 		try {
 			// Read the configuration file
-			ConfigFile cf = root.get(ConfigFile.class, id);
+			ConfigFile cf = root.get(ConfigFile.ContentType, id);
 			// Log the event
 			logger.logTimedMessage("Read " + root.getDirectory() + "/" + id + ".toml", 0, 0);
 			// Construct configuration according to given schema
