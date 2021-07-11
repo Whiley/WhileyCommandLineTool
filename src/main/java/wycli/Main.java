@@ -82,7 +82,7 @@ public class Main implements Command.Environment {
 	 */
 	private final Schema localSchema;
 
-	public Main(Plugin.Environment env, Iterable<Build.Artifact> entries, DirectoryRoot packageRepository)
+	public Main(Plugin.Environment env, Iterable<Build.Artifact> entries, Content.Root packageRepository)
 			throws IOException {
 		this.env = env;
 		this.repository = new ByteRepository(entries);
@@ -118,18 +118,24 @@ public class Main implements Command.Environment {
 
 	@Override
 	public Configuration get(Path path) {
-		ArrayList<Configuration> files = new ArrayList<>();
-		// Pull out all configuration files upto the root
-		while (path != null) {
-			ConfigFile cf = repository.get(ConfigFile.ContentType, path.append("wy"));
-			if (cf != null) {
-				Configuration c = cf.toConfiguration(localSchema, false);
-				files.add(c);
+		try {
+			ArrayList<Configuration> files = new ArrayList<>();
+			// Pull out all configuration files upto the root
+			while (path != null) {
+				ConfigFile cf = repository.get(ConfigFile.ContentType, path.append("wy"));
+				if (cf != null) {
+					Configuration c = cf.toConfiguration(localSchema, false);
+					files.add(c);
+				}
+				path = path.parent();
 			}
-			path = path.parent();
+			// Construct the combinator
+			return new ConfigurationCombinator(files.toArray(new Configuration[files.size()]));
+		} catch(IOException e) {
+			// FIXME: this is a hack for now. A better solution is to read all configuration
+			// files into memory at the beginning.
+			throw new RuntimeException(e);
 		}
-		// Construct the combinator
-		return new ConfigurationCombinator(files.toArray(new Configuration[files.size()]));
 	}
 
 	@Override
@@ -181,12 +187,15 @@ public class Main implements Command.Environment {
 		DirectoryRoot SystemDir = determineSystemRoot();
 		// Read the system configuration file
 		Configuration system = readConfigFile(SystemDir, Path.fromString("wy"), logger, Schemas.SYSTEM_CONFIG_SCHEMA);
-		// Determine user-wide directory
-		DirectoryRoot globalDir = determineGlobalRoot(logger);
 		// Construct plugin environment and activate plugins
 		Plugin.Environment penv = activatePlugins(system, logger);
 		// Register content type for configuration files
 		penv.register(Content.Type.class, ConfigFile.ContentType);
+		penv.register(Content.Type.class, ZipFile.ContentType);
+		// Determine user-wide directory
+		DirectoryRoot globalDir = determineGlobalRoot(logger, penv);
+		// Identify repository
+		Content.Root repositoryDir = globalDir.subroot(DEFAULT_REPOSITORY_PATH);
 		// Determine top-level directory and relative path
 		Pair<File, Path> lrp = determineLocalRootDirectory();
 		File localDir = lrp.first();
@@ -195,8 +204,15 @@ public class Main implements Command.Environment {
 		File buildDir = determineBuildDirectory(localDir, logger);
 		// Construct workding directory
 		DirectoryRoot dir = new DirectoryRoot(penv, localDir);
+		// Extract build artifacts
+		List<Build.Artifact> artifacts = new ArrayList<>();
+		for (Content content : dir) {
+			if (content instanceof Build.Artifact) {
+				artifacts.add((Build.Artifact) content);
+			}
+		}
 		// Construct command environment!
-		Main menv = new Main(penv, dir, resolver);
+		Main menv = new Main(penv, artifacts, repositoryDir);
 		// Execute the given command
 		int exitCode = exec(menv, path, args);
 		// Write back all artifacts to the working director
@@ -276,14 +292,14 @@ public class Main implements Command.Environment {
 	 * @return
 	 * @throws IOException
 	 */
-	private static DirectoryRoot determineGlobalRoot(Logger logger) throws IOException {
+	private static DirectoryRoot determineGlobalRoot(Logger logger, Content.Registry registry) throws IOException {
 		String userhome = System.getProperty("user.home");
 		File whileydir = new File(userhome + File.separator + ".whiley");
 		if (!whileydir.exists()) {
 			logger.logTimedMessage("mkdir " + whileydir.toString(), 0, 0);
 			whileydir.mkdirs();
 		}
-		return new DirectoryRoot(BOOT_REGISTRY, whileydir);
+		return new DirectoryRoot(registry, whileydir);
 	}
 
 	/**

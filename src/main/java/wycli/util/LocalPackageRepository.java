@@ -22,10 +22,9 @@ import wycli.cfg.Configuration;
 import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Semantic;
-
+import wycc.lang.Content;
 import wycc.lang.Filter;
 import wycc.lang.Path;
-import wycc.util.DirectoryRoot;
 import wycc.util.ZipFile;
 
 /**
@@ -44,14 +43,14 @@ public class LocalPackageRepository implements Package.Repository {
 
 	protected final Command.Environment environment;
 	protected final Package.Repository parent;
-	protected final DirectoryRoot root;
+	protected final Content.Root root;
 
-	public LocalPackageRepository(Command.Environment environment, DirectoryRoot root) throws IOException {
+	public LocalPackageRepository(Command.Environment environment, Content.Root root) throws IOException {
 		this(environment,null,root);
 	}
 
 	public LocalPackageRepository(Command.Environment environment, Package.Repository parent,
-			DirectoryRoot root)
+			Content.Root root)
 			throws IOException {
 		this.parent = parent;
 		this.environment = environment;

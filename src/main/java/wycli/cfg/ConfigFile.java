@@ -33,7 +33,7 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 
 	public static final Content.Type<ConfigFile> ContentType = new Content.Type<ConfigFile>() {
 		@Override
-		public ConfigFile read(Path id, InputStream input) throws IOException {
+		public ConfigFile read(Path id, InputStream input, Content.Registry registry) throws IOException {
 			ConfigFileLexer lexer = new ConfigFileLexer(input);
 			ConfigFileParser parser = new ConfigFileParser(id, lexer.scan());
 			return parser.read();
@@ -100,10 +100,11 @@ public class ConfigFile extends AbstractCompilationUnit<ConfigFile> implements B
 		return ConfigFile.ContentType;
 	}
 
+	@Override
 	public List<? extends Build.Artifact> getSourceArtifacts() {
 		return Collections.EMPTY_LIST;
 	}
-	
+
 	public static interface Declaration extends SyntacticItem {
 
 	}
