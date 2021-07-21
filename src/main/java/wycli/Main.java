@@ -85,7 +85,7 @@ public class Main implements Command.Environment {
 	public Main(Plugin.Environment env, Iterable<Build.Artifact> entries, Content.Root packageRepository)
 			throws IOException {
 		this.env = env;
-		this.repository = new ByteRepository(entries);
+		this.repository = new ByteRepository(env, entries);
 		this.localSchema = constructSchema();
 		// Setup package resolver
 		this.resolver = new StdPackageResolver(this, new LocalPackageRepository(this, packageRepository));
