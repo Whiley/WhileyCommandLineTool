@@ -1,12 +1,9 @@
 package wycli.util;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,25 +17,20 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-
-import wybs.util.AbstractCompilationUnit.Value;
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
 import wycli.lang.Package;
-import wycli.lang.SemanticVersion;
-import wycli.lang.Package.Repository;
-import wyfs.lang.Content;
-import wyfs.lang.Path;
-import wyfs.util.Trie;
-import wyfs.util.ZipFile;
+import wycli.lang.Semantic;
+import wycc.lang.Content;
+import wycc.lang.Path;
+import wycc.util.ZipFile;
 
 public class RemotePackageRepository extends LocalPackageRepository {
 
-	public static final Trie REPOSITORY_URL = Trie.fromString("repository/url");
-	public static final Trie REPOSITORY_ROUTE = Trie.fromString("repository/route");
-	public static final Trie REPOSITORY_COOKIE = Trie.fromString("repository/cookie");
-	public static final Trie REPOSITORY_PROXY = Trie.fromString("repository/proxy");
+	public static final Path REPOSITORY_URL = Path.fromString("repository/url");
+	public static final Path REPOSITORY_ROUTE = Path.fromString("repository/route");
+	public static final Path REPOSITORY_COOKIE = Path.fromString("repository/cookie");
+	public static final Path REPOSITORY_PROXY = Path.fromString("repository/proxy");
 
 	/**
 	 * Schema for global configuration (i.e. which applies to all projects for a given user).
@@ -75,35 +67,35 @@ public class RemotePackageRepository extends LocalPackageRepository {
 	/**
 	 * Master index of all known semantic versions
 	 */
-	private Map<String,Set<SemanticVersion>> index = null;
+	private Map<String,Set<Semantic.Version>> index = null;
 
-	public RemotePackageRepository(Command.Environment environment,Content.Registry registry, Path.Root root) throws IOException {
-		this(environment,null,registry,root);
+	public RemotePackageRepository(Command.Environment environment, Content.Root root) throws IOException {
+		this(environment, null, root);
 	}
 
-	public RemotePackageRepository(Command.Environment environment, Package.Repository parent, Content.Registry registry, Path.Root root) throws IOException {
-		super(environment,parent,registry,root);
-		// Check whether URL configuration given
-		if(environment.hasKey(REPOSITORY_URL)) {
-			this.uri = environment.get(Value.UTF8.class, REPOSITORY_URL).toString();
-		}
-		// Check whether route configuration given
-		if(environment.hasKey(REPOSITORY_ROUTE)) {
-			this.pkgRoute = environment.get(Value.UTF8.class, REPOSITORY_ROUTE).toString();
-		}
-		// Check whether cookie configuration given
-		if(environment.hasKey(REPOSITORY_COOKIE)) {
-			this.cookie = environment.get(Value.UTF8.class, REPOSITORY_COOKIE).toString();
-		}
-		// Check whether proxy configuration given
-		if(environment.hasKey(REPOSITORY_PROXY)) {
-			this.proxy = environment.get(Value.UTF8.class, REPOSITORY_PROXY).toString();
-		}
+	public RemotePackageRepository(Command.Environment environment, Package.Repository parent, Content.Root root) throws IOException {
+		super(environment, parent, root);
+//		// Check whether URL configuration given
+//		if(environment.hasKey(REPOSITORY_URL)) {
+//			this.uri = environment.get(Value.UTF8.class, REPOSITORY_URL).toString();
+//		}
+//		// Check whether route configuration given
+//		if(environment.hasKey(REPOSITORY_ROUTE)) {
+//			this.pkgRoute = environment.get(Value.UTF8.class, REPOSITORY_ROUTE).toString();
+//		}
+//		// Check whether cookie configuration given
+//		if(environment.hasKey(REPOSITORY_COOKIE)) {
+//			this.cookie = environment.get(Value.UTF8.class, REPOSITORY_COOKIE).toString();
+//		}
+//		// Check whether proxy configuration given
+//		if(environment.hasKey(REPOSITORY_PROXY)) {
+//			this.proxy = environment.get(Value.UTF8.class, REPOSITORY_PROXY).toString();
+//		}
 	}
 
 	@Override
-	public Set<SemanticVersion> list(String pkg) throws IOException {
-		Set<SemanticVersion> results = super.list(pkg);
+	public Set<Semantic.Version> list(String pkg) throws IOException {
+		Set<Semantic.Version> results = super.list(pkg);
 		// Make sure index is upto date
 		loadIndex();
 		// Add any known versions from remote index
@@ -115,9 +107,9 @@ public class RemotePackageRepository extends LocalPackageRepository {
 	}
 
 	@Override
-	public Path.Root get(String name, SemanticVersion version) throws IOException {
+	public ZipFile get(String name, Semantic.Version version) throws IOException {
 		// Check for local version of this package
-		Path.Root pkg = super.get(name, version);
+		ZipFile pkg = super.get(name, version);
 		// Did we find it?
 		if (pkg == null) {
 			// Nope, so get from remote
@@ -135,7 +127,7 @@ public class RemotePackageRepository extends LocalPackageRepository {
 	}
 
 	@Override
-	public void put(ZipFile pkg, String name, SemanticVersion version) throws IOException {
+	public void put(ZipFile pkg, String name, Semantic.Version version) throws IOException {
 		// FIXME: this is really a temporary hack.
 		super.put(pkg, name, version);
 	}
@@ -150,7 +142,7 @@ public class RemotePackageRepository extends LocalPackageRepository {
 	 * @throws UnsupportedOperationException
 	 * @throws IOException
 	 */
-	private ZipFile getRemote(String name, SemanticVersion version) throws UnsupportedOperationException, IOException {
+	private ZipFile getRemote(String name, Semantic.Version version) throws UnsupportedOperationException, IOException {
 		String url = uri + pkgRoute.replace("${NAME}", name).replace("${VERSION}", version.toString());
 		//
 		CloseableHttpClient httpclient = getClient();
@@ -165,7 +157,7 @@ public class RemotePackageRepository extends LocalPackageRepository {
 		try {
 			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 				environment.getLogger().logTimedMessage("Downloaded " + url, 0, 0);
-				return new ZipFile(response.getEntity().getContent());
+				return new ZipFile(root.getContentRegistry(), response.getEntity().getContent());
 			} else {
 				environment.getLogger().logTimedMessage("Failed downloading " + url, 0, 0);
 				return null;
@@ -203,7 +195,7 @@ public class RemotePackageRepository extends LocalPackageRepository {
 					} else {
 						environment.getLogger().logTimedMessage("Failed downloading " + url, 0, 0);
 						// Mark the index as empty
-						this.index = Collections.EMPTY_MAP;
+						this.index = Collections.emptyMap();
 					}
 				} finally {
 					response.close();
@@ -211,7 +203,7 @@ public class RemotePackageRepository extends LocalPackageRepository {
 			} catch (UnknownHostException e) {
 				environment.getLogger().logTimedMessage("Failed downloading " + url, 0, 0);
 				// Mark the index as empty
-				this.index = Collections.EMPTY_MAP;
+				this.index =  Collections.emptyMap();
 			}
 		}
 	}
@@ -240,19 +232,19 @@ public class RemotePackageRepository extends LocalPackageRepository {
 		}
 	}
 
-	private static Map<String, Set<SemanticVersion>> parseIndexFile(BufferedReader reader) throws IOException {
-		HashMap<String, Set<SemanticVersion>> result = new HashMap<>();
+	private static Map<String, Set<Semantic.Version>> parseIndexFile(BufferedReader reader) throws IOException {
+		HashMap<String, Set<Semantic.Version>> result = new HashMap<>();
 		while (reader.ready()) {
 			String line = reader.readLine();
 			String[] components = line.split("/");
 			if (components.length == 2) {
 				String pkg = components[0];
-				Set<SemanticVersion> versions = result.get(pkg);
+				Set<Semantic.Version> versions = result.get(pkg);
 				if (versions == null) {
 					versions = new HashSet<>();
 					result.put(pkg, versions);
 				}
-				versions.add(new SemanticVersion(components[1]));
+				versions.add(new Semantic.Version(components[1]));
 			}
 		}
 		return result;

@@ -15,17 +15,15 @@ package wycli.lang;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 
-import wybs.lang.Build;
-import wybs.lang.Build.Meter;
-import wybs.util.Logger;
-import wybs.util.AbstractCompilationUnit.Value;
+import wycc.lang.Build;
+import wycc.lang.Content;
+import wycc.lang.Build.Repository;
+import wycc.lang.Build.Meter;
+import wycc.lang.Path;
+import wycc.util.Logger;
 import wycli.cfg.Configuration;
-import wycli.lang.Package;
-import wyfs.lang.Content;
-import wyfs.lang.Path;
 
 /**
  * A command which can be executed (e.g. from the command-line)
@@ -59,7 +57,7 @@ public interface Command {
 	 * any calls are made to <code>finalise()</code>. Observer, however, that this
 	 * command may be executed multiple times.
 	 */
-	public boolean execute(Project target, Template template) throws Exception;
+	public boolean execute(Path path, Template template) throws Exception;
 
 	/**
 	 * Defines an environment in which commands can be executed.
@@ -67,7 +65,7 @@ public interface Command {
 	 * @author David J. Pearce
 	 *
 	 */
-	public interface Environment extends Configuration {
+	public interface Environment {
 		/**
 		 * Get the command descriptors available in this environment.
 		 *
@@ -82,15 +80,6 @@ public interface Command {
 		 */
 		Package.Resolver getPackageResolver();
 
-
-		/**
-		 * Get the top-level root for this environment which includes all active
-		 * projects in this environment.
-		 *
-		 * @return
-		 */
-		public Path.Root getRoot();
-
 		/**
 		 * Get the registry used for resolving content types in this environment.
 		 *
@@ -103,21 +92,24 @@ public interface Command {
 		 *
 		 * @return
 		 */
-		public List<Platform> getBuildPlatforms();
+		public List<Platform> getCommandPlatforms();
 
 		/**
-		 * Get the list of all projects active within this environment.
+		 * Get the build repository associated with this environment.
 		 *
 		 * @return
 		 */
-		public List<Build.Project> getProjects();
+		public Repository getRepository();
 
 		/**
-		 * Get the executor service available in this environment
+		 * Get the configuration associated with a given build path.  The key is that the configuration at a given path
+		 * is the combination of all configurations on parent paths leading to that point, plus any specific
+		 * configuration at that point.
 		 *
+		 * @param path
 		 * @return
 		 */
-		public ExecutorService getExecutor();
+		public Configuration get(Path path);
 
 		/**
 		 * Get the top-level meter for this environment.
@@ -131,7 +123,6 @@ public interface Command {
 		 */
 		public Logger getLogger();
 	}
-
 
 	/**
 	 * Provides a high-level concept of a target platform. These are registered by
@@ -164,36 +155,7 @@ public interface Command {
 		 *            Enclosing project for this build task
 		 * @return
 		 */
-		public void initialise(Configuration configuration, Command.Project project) throws IOException;
-
-		/**
-		 * Get the source type for this build platform.
-		 *
-		 * @return
-		 */
-		public Content.Type<?> getSourceType();
-
-		/**
-		 * Get the target type for this build platform.
-		 *
-		 * @return
-		 */
-		public Content.Type<?> getTargetType();
-
-		/**
-		 * Execute a given function in the generated code for this platform.
-		 *
-		 * @param project
-		 * @param path
-		 * @param name
-		 * @param args
-		 */
-		public void execute(Build.Project project, Path.ID path, String name, Value... args) throws IOException;
-	}
-
-
-	public interface Project extends Build.Project, Configuration {
-		Environment getEnvironment();
+		public Build.Task initialise(Path path, Environment environment) throws IOException;
 	}
 
 	/**

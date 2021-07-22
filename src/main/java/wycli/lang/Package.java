@@ -16,52 +16,13 @@ package wycli.lang;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
-import wybs.lang.Build;
-import wybs.util.AbstractCompilationUnit.Value;
-import wycli.cfg.ConfigFile;
+import wycc.lang.Build;
+import wycc.lang.Content;
+import wycc.util.ZipFile;
 import wycli.cfg.Configuration;
-import wyfs.lang.Content;
-import wyfs.lang.Path;
-import wyfs.util.Pair;
-import wyfs.util.Trie;
-import wyfs.util.ZipFile;
 
 public interface Package {
-
-	/**
-	 * This determines what files are included in a package be default (i.e. when
-	 * the build/includes attribute is not specified).
-	 */
-	public static final Value.Array DEFAULT_BUILD_INCLUDES = new Value.Array(
-			// Include package description by default
-			new Value.UTF8("wy.toml"),
-			// Include all wyil files by default
-			new Value.UTF8("**/*.wyil"),
-			// Include all whiley files by default
-			new Value.UTF8("**/*.whiley")
-		);
-
-	/**
-	 * Schema for packages (i.e. which applies to a single project for a given user).
-	 */
-	public static Configuration.Schema SCHEMA = Configuration.fromArray(
-			// Required items
-			Configuration.UNBOUND_STRING(Trie.fromString("package/name"), "Name of this package", new Value.UTF8("main")),
-			Configuration.UNBOUND_STRING_ARRAY(Trie.fromString("package/authors"), "Author(s) of this package", false),
-			Configuration.UNBOUND_STRING(Trie.fromString("package/version"), "Semantic version of this package", false),
-			// Build items
-			Configuration.UNBOUND_STRING_ARRAY(Trie.fromString("build/platforms"),
-					"Target platforms for this package (default just \"whiley\")",
-					new Value.Array(new Value.UTF8("whiley"))),
-			Configuration.UNBOUND_STRING_ARRAY(Trie.fromString("build/includes"), "Files to include in package",
-					DEFAULT_BUILD_INCLUDES),
-			Configuration.UNBOUND_STRING(Trie.fromString("build/main"), "Identify main method", false),
-			// Optional items
-			Configuration.REGEX_STRING(Trie.fromString("dependencies/*"), "Packages this package depends on", false,
-					Pattern.compile("\\d+.\\d+.\\d+"))
-	);
 
 	/**
 	 * Responsible for resolving version strings into concrete packages.
@@ -78,7 +39,7 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		List<Path.Root> resolve(Configuration cf) throws IOException;
+		List<Content.Source> resolve(Configuration cf) throws IOException;
 
 		/**
 		 * Get the root repository associated with this package resolver.
@@ -110,7 +71,7 @@ public interface Package {
 		 * @param pkg
 		 * @return
 		 */
-		public Set<SemanticVersion> list(String pkg) throws IOException;
+		public Set<Semantic.Version> list(String pkg) throws IOException;
 
 		/**
 		 * Get a given package in this repository. If no such package exists, an
@@ -120,13 +81,13 @@ public interface Package {
 		 * @param version
 		 * @return
 		 */
-		public Path.Root get(String name, SemanticVersion version) throws IOException;
+		public ZipFile get(String name, Semantic.Version version) throws IOException;
 
 		/**
 		 * Put a given package into this repository.
 		 *
 		 * @param pkg
 		 */
-		public void put(ZipFile pkg, String name, SemanticVersion version) throws IOException;
+		public void put(ZipFile pkg, String name, Semantic.Version version) throws IOException;
 	}
 }

@@ -19,14 +19,13 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import wybs.util.AbstractCompilationUnit.Identifier;
+import wycc.lang.Path;
+import wycc.util.AbstractCompilationUnit.Identifier;
 import wycli.cfg.ConfigFile.*;
 import wycli.cfg.ConfigFileLexer.Token;
-import wybs.lang.SyntacticHeap;
-import wybs.lang.SyntacticItem;
-import wybs.lang.SyntacticException;
-import wybs.util.AbstractCompilationUnit.*;
-import wyfs.lang.Path;
+import wycc.lang.SyntacticItem;
+import wycc.lang.SyntacticException;
+import wycc.util.AbstractCompilationUnit.*;
 
 /**
  * Convert a list of tokens into an Abstract Syntax Tree (AST) representing the
@@ -37,12 +36,12 @@ import wyfs.lang.Path;
  */
 public class ConfigFileParser {
 	private final ConfigFile file;
-	private ArrayList<Token> tokens;
+	private final ArrayList<Token> tokens;
 	private int index;
 
-	public ConfigFileParser(Path.Entry<ConfigFile> entry, List<Token> tokens) {
+	public ConfigFileParser(Path id, List<Token> tokens) {
 		this.tokens = new ArrayList<>(tokens);
-		this.file = new ConfigFile(entry);
+		this.file = new ConfigFile(id);
 	}
 
 	/**
@@ -156,7 +155,7 @@ public class ConfigFileParser {
 			if(last == null) {
 				last = v;
 			} else if(last.getClass() != v.getClass()){
-				throw new SyntacticException("array elements require same type",file.getEntry(),v);
+				throw new SyntacticException("array elements require same type", file, v);
 			}
 			values.add(v);
 		}
@@ -373,7 +372,7 @@ public class ConfigFileParser {
 			} else {
 				// I believe this is actually dead-code, since checkNotEof()
 				// won't be called before at least one token is matched.
-				throw new SyntacticException("unexpected end-of-file", file.getEntry(), null);
+				throw new SyntacticException("unexpected end-of-file", file, null);
 			}
 		}
 	}
@@ -589,7 +588,7 @@ public class ConfigFileParser {
 	}
 
 	private void syntaxError(String msg, Token t) {
-		throw new SyntacticException(msg, file.getEntry(), new ConfigFile.Attribute.Span(null,t.start,t.end()));
+		throw new SyntacticException(msg, file, new ConfigFile.Attribute.Span(null, t.start, t.end()));
 	}
 
 	/**

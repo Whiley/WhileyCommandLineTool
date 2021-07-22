@@ -19,11 +19,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import wybs.lang.SyntacticItem;
-import wybs.util.AbstractCompilationUnit.Value;
-import wyfs.lang.Path;
-import wyfs.lang.Path.Filter;
-import wyfs.lang.Path.ID;
+import wycc.lang.Filter;
+import wycc.lang.Path;
+import wycc.util.AbstractCompilationUnit.Value;
 
 /**
  * A configuration provides a generic key-value store for which the backing is
@@ -48,14 +46,14 @@ public interface Configuration {
 	 * @param key
 	 * @return
 	 */
-	public <T> boolean hasKey(Path.ID key);
+	public <T> boolean hasKey(Path key);
 
 	/**
 	 * Get the value associated with a given key. If no such key exists, an
 	 * exception is raised. Every value returned is valid with respect to the
 	 * schema.
 	 */
-	public <T> T get(Class<T> kind, Path.ID key);
+	public <T> T get(Class<T> kind, Path key);
 
 	/**
 	 * Associate a given value with a given key in the configuration. This will
@@ -65,7 +63,7 @@ public interface Configuration {
 	 * @param key
 	 * @param value
 	 */
-	public <T> void write(Path.ID key, T value);
+	public <T> void write(Path key, T value);
 
 	/**
 	 * Determine all matching keys in this configuration.
@@ -73,7 +71,7 @@ public interface Configuration {
 	 * @param filter
 	 * @return
 	 */
-	public List<Path.ID> matchAll(Path.Filter filter);
+	public List<Path> matchAll(Filter filter);
 
 	/**
 	 * Determines what values are permitted and required for this configuration.
@@ -88,7 +86,7 @@ public interface Configuration {
 		 * @param key
 		 * @return
 		 */
-		public boolean isKey(Path.ID key);
+		public boolean isKey(Path key);
 
 		/**
 		 * Get the descriptor associated with a given key.
@@ -96,7 +94,7 @@ public interface Configuration {
 		 * @param key
 		 * @return
 		 */
-		public KeyValueDescriptor<?> getDescriptor(Path.ID key);
+		public KeyValueDescriptor<?> getDescriptor(Path key);
 
 		/**
 		 * Get the list of all descriptors in this schema.
@@ -130,7 +128,7 @@ public interface Configuration {
 			}
 
 			@Override
-			public <T> T get(Class<T> kind, ID key) {
+			public <T> T get(Class<T> kind, Path key) {
 				Configuration.KeyValueDescriptor<?> descriptor = schema.getDescriptor(key);
 				if(descriptor != null && descriptor.hasDefault()) {
 					Object value = descriptor.getDefault();
@@ -144,19 +142,19 @@ public interface Configuration {
 			}
 
 			@Override
-			public <T> void write(ID key, T value) {
+			public <T> void write(Path key, T value) {
 				throw new IllegalArgumentException("invalid key access: " + key);
 			}
 
 			@Override
-			public List<ID> matchAll(Filter filter) {
+			public List<Path> matchAll(Filter filter) {
 				// FIXME: need really to implement this method somehow!
 
 				return Collections.EMPTY_LIST;
 			}
 
 			@Override
-			public <T> boolean hasKey(ID key) {
+			public <T> boolean hasKey(Path key) {
 				Configuration.KeyValueDescriptor<?> descriptor = schema.getDescriptor(key);
 				return descriptor != null && descriptor.hasDefault();
 			}
@@ -169,12 +167,12 @@ public interface Configuration {
 	public static final Configuration.Schema EMPTY_SCHEMA = new Configuration.Schema() {
 
 		@Override
-		public boolean isKey(ID key) {
+		public boolean isKey(Path key) {
 			return false;
 		}
 
 		@Override
-		public KeyValueDescriptor<?> getDescriptor(ID key) {
+		public KeyValueDescriptor<?> getDescriptor(Path key) {
 			throw new IllegalArgumentException("invalid key: " + key);
 		}
 
@@ -196,7 +194,7 @@ public interface Configuration {
 		return new Schema() {
 
 			@Override
-			public boolean isKey(ID key) {
+			public boolean isKey(Path key) {
 				for (int i = 0; i != schemas.length; ++i) {
 					if (schemas[i].isKey(key)) {
 						return true;
@@ -206,7 +204,7 @@ public interface Configuration {
 			}
 
 			@Override
-			public KeyValueDescriptor<?> getDescriptor(ID key) {
+			public KeyValueDescriptor<?> getDescriptor(Path key) {
 				for (int i = 0; i != schemas.length; ++i) {
 					Schema schema = schemas[i];
 					//
@@ -243,7 +241,7 @@ public interface Configuration {
 		return new Schema() {
 
 			@Override
-			public KeyValueDescriptor<?> getDescriptor(Path.ID key) {
+			public KeyValueDescriptor<?> getDescriptor(Path key) {
 				for (int i = 0; i != descriptors.length; ++i) {
 					KeyValueDescriptor<?> descriptor = descriptors[i];
 					if (descriptor.getFilter().matches(key)) {
@@ -254,7 +252,7 @@ public interface Configuration {
 			}
 
 			@Override
-			public boolean isKey(ID key) {
+			public boolean isKey(Path key) {
 				for (int i = 0; i != descriptors.length; ++i) {
 					KeyValueDescriptor<?> descriptor = descriptors[i];
 					if (descriptor.getFilter().matches(key)) {
@@ -286,7 +284,7 @@ public interface Configuration {
 		 *
 		 * @return
 		 */
-		public Path.Filter getFilter();
+		public Filter getFilter();
 
 		/**
 		 * Get the description associated with this descriptor.
@@ -345,13 +343,13 @@ public interface Configuration {
 	 * @param <T>
 	 */
 	public static abstract class AbstractDescriptor<T> implements KeyValueDescriptor<T> {
-		private final Path.Filter key;
+		private final Filter key;
 		private final String description;
 		private final boolean required;
 		private final T defaulT;
 		private final Class<T> type;
 
-		public AbstractDescriptor(Path.Filter key, String description, Class<T> type, boolean required) {
+		public AbstractDescriptor(Filter key, String description, Class<T> type, boolean required) {
 			this.key = key;
 			this.description = description;
 			this.type = type;
@@ -359,7 +357,7 @@ public interface Configuration {
 			this.defaulT = null;
 		}
 
-		public AbstractDescriptor(Path.Filter key, String description, Class<T> type, T defaulT) {
+		public AbstractDescriptor(Filter key, String description, Class<T> type, T defaulT) {
 			this.key = key;
 			this.description = description;
 			this.type = type;
@@ -368,7 +366,7 @@ public interface Configuration {
 		}
 
 		@Override
-		public Path.Filter getFilter() {
+		public Filter getFilter() {
 			return key;
 		}
 
@@ -421,7 +419,7 @@ public interface Configuration {
 	 *            descriptor for a given schema
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.UTF8> UNBOUND_STRING(Path.Filter key, String description, boolean required) {
+	public static KeyValueDescriptor<Value.UTF8> UNBOUND_STRING(Filter key, String description, boolean required) {
 		return new AbstractDescriptor<Value.UTF8>(key, description, Value.UTF8.class, required) {
 
 		};
@@ -439,7 +437,7 @@ public interface Configuration {
 	 *            Default to return in case this attribute is not specified.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.UTF8> UNBOUND_STRING(Path.Filter key, String description,
+	public static KeyValueDescriptor<Value.UTF8> UNBOUND_STRING(Filter key, String description,
 			Value.UTF8 defaulT) {
 		return new AbstractDescriptor<Value.UTF8>(key, description, Value.UTF8.class, defaulT) {
 
@@ -462,7 +460,7 @@ public interface Configuration {
 	 *            conform.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.UTF8> REGEX_STRING(Path.Filter key, String description, boolean required,
+	public static KeyValueDescriptor<Value.UTF8> REGEX_STRING(Filter key, String description, boolean required,
 			Pattern regex) {
 		return new AbstractDescriptor<Value.UTF8>(key, description, Value.UTF8.class, required) {
 			@Override
@@ -487,7 +485,7 @@ public interface Configuration {
 	 *            conform.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.UTF8> REGEX_STRING(Path.Filter key, String description, Value.UTF8 defaulT,
+	public static KeyValueDescriptor<Value.UTF8> REGEX_STRING(Filter key, String description, Value.UTF8 defaulT,
 			Pattern regex) {
 		KeyValueDescriptor<Value.UTF8> desc = new AbstractDescriptor<Value.UTF8>(key, description, Value.UTF8.class,
 				defaulT) {
@@ -515,7 +513,7 @@ public interface Configuration {
 	 *            descriptor for a given schema
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Int> UNBOUND_INTEGER(Path.Filter key, String description, boolean required) {
+	public static KeyValueDescriptor<Value.Int> UNBOUND_INTEGER(Filter key, String description, boolean required) {
 		return new AbstractDescriptor<Value.Int>(key, description, Value.Int.class, required) {
 
 		};
@@ -533,7 +531,7 @@ public interface Configuration {
 	 *            Default to return in case this attribute is not specified.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Int> UNBOUND_INTEGER(Path.Filter key, String description,
+	public static KeyValueDescriptor<Value.Int> UNBOUND_INTEGER(Filter key, String description,
 			Value.Int defaulT) {
 		return new AbstractDescriptor<Value.Int>(key, description, Value.Int.class, defaulT) {
 
@@ -555,7 +553,7 @@ public interface Configuration {
 	 *            No valid value is below this bound.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Int> BOUND_INTEGER(Path.Filter key, String description, boolean required,
+	public static KeyValueDescriptor<Value.Int> BOUND_INTEGER(Filter key, String description, boolean required,
 			final int low) {
 		return new AbstractDescriptor<Value.Int>(key, description, Value.Int.class, required) {
 			@Override
@@ -580,7 +578,7 @@ public interface Configuration {
 	 *            No valid value is below this bound.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Int> BOUND_INTEGER(Path.Filter key, String description, Value.Int defaulT,
+	public static KeyValueDescriptor<Value.Int> BOUND_INTEGER(Filter key, String description, Value.Int defaulT,
 			final int low) {
 		KeyValueDescriptor<Value.Int> desc = new AbstractDescriptor<Value.Int>(key, description, Value.Int.class,
 				defaulT) {
@@ -614,7 +612,7 @@ public interface Configuration {
 	 *            No valid value is above this bound.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Int> BOUND_INTEGER(Path.Filter key, String description, Value.Int defaulT,
+	public static KeyValueDescriptor<Value.Int> BOUND_INTEGER(Filter key, String description, Value.Int defaulT,
 			final int low, final int high) {
 		return new AbstractDescriptor<Value.Int>(key, description, Value.Int.class, defaulT) {
 			@Override
@@ -638,7 +636,7 @@ public interface Configuration {
 	 * @param high        No valid value is above this bound.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Decimal> BOUND_DECIMAL(Path.Filter key, String description, Value.Decimal defaulT,
+	public static KeyValueDescriptor<Value.Decimal> BOUND_DECIMAL(Filter key, String description, Value.Decimal defaulT,
 			final double low, final double high) {
 		return new AbstractDescriptor<Value.Decimal>(key, description, Value.Decimal.class, defaulT) {
 			@Override
@@ -662,7 +660,7 @@ public interface Configuration {
 	 *            descriptor for a given schema
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Bool> UNBOUND_BOOLEAN(Path.Filter key, String description,
+	public static KeyValueDescriptor<Value.Bool> UNBOUND_BOOLEAN(Filter key, String description,
 			boolean required) {
 		return new AbstractDescriptor<Value.Bool>(key, description, Value.Bool.class, required) {
 
@@ -681,7 +679,7 @@ public interface Configuration {
 	 *            Default to return in case this attribute is not specified.
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Bool> UNBOUND_BOOLEAN(Path.Filter key, String description,
+	public static KeyValueDescriptor<Value.Bool> UNBOUND_BOOLEAN(Filter key, String description,
 			Value.Bool defaulT) {
 		return new AbstractDescriptor<Value.Bool>(key, description, Value.Bool.class, defaulT) {
 
@@ -697,7 +695,7 @@ public interface Configuration {
 	 * @param required
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Array> UNBOUND_STRING_ARRAY(Path.Filter key, String description,
+	public static KeyValueDescriptor<Value.Array> UNBOUND_STRING_ARRAY(Filter key, String description,
 			boolean required) {
 		return new AbstractDescriptor<Value.Array>(key, description, Value.Array.class, required) {
 			@Override
@@ -721,7 +719,7 @@ public interface Configuration {
 	 * @param required
 	 * @return
 	 */
-	public static KeyValueDescriptor<Value.Array> UNBOUND_STRING_ARRAY(Path.Filter key, String description,
+	public static KeyValueDescriptor<Value.Array> UNBOUND_STRING_ARRAY(Filter key, String description,
 			Value.Array defaulT) {
 		AbstractDescriptor<Value.Array> desc = new AbstractDescriptor<Value.Array>(key, description, Value.Array.class,
 				defaulT) {
@@ -751,7 +749,7 @@ public interface Configuration {
 	 * @param required
 	 * @return
 	 */
-	public static <T extends Value> KeyValueDescriptor<Value.Array> UNBOUND_ARRAY(Path.Filter key, String description,
+	public static <T extends Value> KeyValueDescriptor<Value.Array> UNBOUND_ARRAY(Filter key, String description,
 			Class<T> kind, Value.Array defaulT) {
 		AbstractDescriptor<Value.Array> desc = new AbstractDescriptor<Value.Array>(key, description, Value.Array.class,
 				defaulT) {

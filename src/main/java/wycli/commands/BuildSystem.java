@@ -20,23 +20,31 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
-import wybs.lang.SyntacticHeap;
-import wybs.lang.SyntacticItem;
-import wybs.lang.SourceFile;
-import wybs.util.AbstractCompilationUnit;
-import wybs.util.AbstractCompilationUnit.Attribute;
-import wybs.util.AbstractCompilationUnit.Attribute.Span;
+import wycc.lang.Path;
+import wycc.lang.SyntacticHeap;
+import wycc.lang.SyntacticItem;
+import wycc.lang.SourceFile;
+import wycc.lang.Build.Repository;
+import wycc.lang.Build.SnapShot;
+import wycc.lang.Build;
+import wycc.lang.Build.Artifact;
+import wycc.util.AbstractCompilationUnit;
+import wycc.util.AbstractCompilationUnit.Attribute.Span;
 import wycli.cfg.Configuration;
 import wycli.cfg.Configuration.Schema;
 import wycli.lang.Command;
-import wyfs.lang.Path;
+import wycc.util.Pair;
 
-public class Build implements Command {
+/**
+ *
+ * @author David J. Pearce
+ *
+ */
+public class BuildSystem implements Command {
 	/**
 	 * The descriptor for this command.
 	 */
@@ -69,7 +77,7 @@ public class Build implements Command {
 
 		@Override
 		public Command initialise(Command.Environment environment) {
-			return new Build(environment, System.out, System.err);
+			return new BuildSystem(environment, System.out, System.err);
 		}
 
 	};
@@ -98,7 +106,7 @@ public class Build implements Command {
 	 */
 	private final Command.Environment environment;
 
-	public Build(Command.Environment environment, OutputStream sysout, OutputStream syserr) {
+	public BuildSystem(Command.Environment environment, OutputStream sysout, OutputStream syserr) {
 		this.environment = environment;
 		this.sysout = new PrintStream(sysout);
 		this.syserr = new PrintStream(syserr);
@@ -119,30 +127,58 @@ public class Build implements Command {
 	}
 
 	@Override
-	public boolean execute(Command.Project project, Template template) throws Exception {
-		boolean r = true;
-		if(project == null) {
-			// Build all projects
-			for(wybs.lang.Build.Project p : environment.getProjects()) {
-				r &= execute(p);
-			}
-		} else {
-			// Build target project (and dependencies)
-			r = execute(project);
+	public boolean execute(Path path, Template template) throws Exception {
+		Repository repository = environment.getRepository();
+		List<Build.Task> tasks = new ArrayList<>();
+		// Construct tasks
+		for(Command.Platform p : environment.getCommandPlatforms()) {
+			tasks.add(p.initialise(path, environment));
 		}
-		//
-		return r;
+		// Construct pipeline
+		Pipeline pipeline = new Pipeline(tasks);
+		// Runs tasks
+		repository.apply(pipeline);
+		// Look for error messages
+		// At this point we need to figure out what the generated files are, and from
+		// them determine the sources which generated them.
+		for (Build.Task task : tasks) {
+			Path target = task.getPath();
+			Build.Artifact binary = repository.get(task.getContentType(), target);
+			printSyntacticMarkers(syserr, binary);
+		}
+		// Success if all pipeline stages completed
+		if(pipeline.completed == tasks.size()) {
+			// Build succeeded
+			return true;
+		} else {
+			syserr.println("Build failed.");
+			// Build failure
+			return false;
+		}
 	}
 
-	private boolean execute(wybs.lang.Build.Project project) throws Exception {
-		// Build the project
-		boolean r = project.build(environment.getExecutor(), environment.getMeter()).get();
-		// Look for error messages
-		for (wybs.lang.Build.Task task : project.getTasks()) {
-			printSyntacticMarkers(syserr, task.getSources(), task.getTarget());
+	private static class Pipeline implements Function<SnapShot,SnapShot> {
+		private final List<Build.Task> tasks;
+		private int completed;
+
+		private Pipeline(List<Build.Task> tasks) {
+			this.tasks = tasks;
 		}
-		//
-		return r;
+
+		@Override
+		public SnapShot apply(SnapShot s) {
+			for (int i = 0; i != tasks.size(); ++i) {
+				Build.Task ith = tasks.get(i);
+				Pair<SnapShot, Boolean> p = ith.apply(s);
+				s = p.first();
+				if (!p.second()) {
+					// Print error messages
+					break;
+				}
+				completed = completed + 1;
+			}
+			return s;
+		}
 	}
 
 	/**
@@ -152,13 +188,13 @@ public class Build implements Command {
 	 * @param executor
 	 * @throws IOException
 	 */
-	public static void printSyntacticMarkers(PrintStream output, Collection<Path.Entry<?>> sources, Path.Entry<?> target) throws IOException {
+	public static void printSyntacticMarkers(PrintStream output, Build.Artifact target) throws IOException {
 		// Extract all syntactic markers from entries in the build graph
 		List<SyntacticItem.Marker> items = extractSyntacticMarkers(target);
 		// For each marker, print out error messages appropriately
 		for (int i = 0; i != items.size(); ++i) {
 			// Log the error message
-			printSyntacticMarkers(output, sources, items.get(i));
+			printSyntacticMarkers(output, items.get(i), target.getSourceArtifacts());
 		}
 	}
 
@@ -177,28 +213,10 @@ public class Build implements Command {
 	 *
 	 * @param marker
 	 */
-	public static void printSyntacticMarkers(PrintStream output, Collection<Path.Entry<?>> sources, SyntacticItem.Marker marker) {
-		//
-		Path.Entry<?> source = getSourceEntry(sources,marker.getSource());
-		//
-		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
-		// Read the enclosing line so we can print it
-		EnclosingLine line = readEnclosingLine(source, span);
-		// Sanity check we found it
-		if(line != null) {
-			// print the error message
-			output.println(source.location() + ":" + line.lineNumber + ": " + marker.getMessage());
-			// Finally print the line highlight
-			printLineHighlight(output, line);
-		} else {
-			output.println(source.location() + ":?: " + marker.getMessage());
-		}
-	}
-
 	public static void printSyntacticMarkers(PrintStream output, SyntacticItem.Marker marker, SourceFile... sources) {
 		// Identify enclosing source file
 		SourceFile source = getSourceEntry(marker.getSource(), sources);
-		String filename = source.getID() + "." + source.getContentType().getSuffix();
+		String filename = source.getPath().toString();
 		//
 		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
 		// Read the enclosing line so we can print it
@@ -214,15 +232,34 @@ public class Build implements Command {
 		}
 	}
 
-	public static List<SyntacticItem.Marker> extractSyntacticMarkers(Path.Entry<?>... binaries) throws IOException {
+	public static void printSyntacticMarkers(PrintStream output, SyntacticItem.Marker marker,
+			List<? extends Build.Artifact> sources) {
+		// Identify enclosing source file
+		SourceFile source = getSourceEntry(marker.getSource(), sources);
+		String filename = source.getPath().toString();
+		//
+		Span span = marker.getTarget().getAncestor(AbstractCompilationUnit.Attribute.Span.class);
+		// Read the enclosing line so we can print it
+		SourceFile.Line line = source.getEnclosingLine(span.getStart().get().intValue());
+		// Sanity check we found it
+		if (line != null) {
+			// print the error message
+			output.println(filename + ":" + line.getNumber() + ": " + marker.getMessage());
+			// Finally print the line highlight
+			printLineHighlight(output, span, line);
+		} else {
+			output.println(filename + ":?: " + marker.getMessage());
+		}
+	}
+
+	public static List<SyntacticItem.Marker> extractSyntacticMarkers(Build.Artifact... binaries) throws IOException {
 		List<SyntacticItem.Marker> annotated = new ArrayList<>();
 		//
-		for (Path.Entry<?> binary : binaries) {
-			Object o = binary.read();
+		for (Artifact b : binaries) {
 			// If the object in question can be decoded as a syntactic heap then we can look
 			// for syntactic messages.
-			if (o instanceof SyntacticHeap) {
-				annotated.addAll(extractSyntacticMarkers((SyntacticHeap) o));
+			if (b instanceof SyntacticHeap) {
+				annotated.addAll(extractSyntacticMarkers((SyntacticHeap) b));
 			}
 		}
 		//
@@ -245,57 +282,25 @@ public class Build implements Command {
 		return annotated;
 	}
 
-	private static Path.Entry<?> getSourceEntry(Collection<Path.Entry<?>> sources, Path.ID id) {
-		String str = id.toString();
-		//
-		for (Path.Entry<?> s : sources) {
-			// FIXME: this is obviously a bad hack for now
-			String sid = s.id().toString();
-			if (sid.endsWith(str)) {
-				return s;
-			}
-		}
-		return null;
-	}
-
-	private static SourceFile getSourceEntry(Path.ID id, SourceFile... sources) {
+	private static SourceFile getSourceEntry(Path id, SourceFile... sources) {
 		//
 		for (SourceFile s : sources) {
-			if (id.equals(s.getID())) {
+			if (id.equals(s.getPath())) {
 				return s;
 			}
 		}
 		return null;
 	}
 
-
-	private static void printLineHighlight(PrintStream output,
-			EnclosingLine enclosing) {
-		// NOTE: in the following lines I don't print characters
-		// individually. The reason for this is that it messes up the
-		// ANT task output.
-		String str = enclosing.lineText;
-
-		if (str.length() > 0 && str.charAt(str.length() - 1) == '\n') {
-			output.print(str);
-		} else {
-			// this must be the very last line of output and, in this
-			// particular case, there is no new-line character provided.
-			// Therefore, we need to provide one ourselves!
-			output.println(str);
-		}
-		str = "";
-		for (int i = 0; i < enclosing.columnStart(); ++i) {
-			if (enclosing.lineText.charAt(i) == '\t') {
-				str += "\t";
-			} else {
-				str += " ";
+	private static SourceFile getSourceEntry(Path id, List<? extends Build.Artifact> sources) {
+		//
+		for (Build.Artifact s : sources) {
+			if (id.equals(s.getPath())) {
+				// FIXME: this is broken
+				return (SourceFile) s;
 			}
 		}
-		for (int i = enclosing.columnStart(); i <= enclosing.columnEnd(); ++i) {
-			str += "^";
-		}
-		output.println(str);
+		return null;
 	}
 
 	private static void printLineHighlight(PrintStream output,
@@ -324,44 +329,6 @@ public class Build implements Command {
 			str += "^";
 		}
 		output.println(str);
-	}
-
-	private static EnclosingLine readEnclosingLine(Path.Entry<?> entry, Attribute.Span location) {
-		int spanStart = location.getStart().get().intValue();
-		int spanEnd = location.getEnd().get().intValue();
-		int line = 0;
-		int lineStart = 0;
-		int lineEnd = 0;
-		StringBuilder text = new StringBuilder();
-		try {
-			BufferedReader in = new BufferedReader(new InputStreamReader(entry.inputStream(), "UTF-8"));
-
-			// first, read whole file
-			int len = 0;
-			char[] buf = new char[1024];
-			while ((len = in.read(buf)) != -1) {
-				text.append(buf, 0, len);
-			}
-
-			while (lineEnd < text.length() && lineEnd <= spanStart) {
-				lineStart = lineEnd;
-				lineEnd = parseLine(text, lineEnd);
-				line = line + 1;
-			}
-		} catch (IOException e) {
-			return null;
-		}
-		lineEnd = Math.min(lineEnd, text.length());
-
-		return new EnclosingLine(spanStart, spanEnd, line, lineStart, lineEnd,
-				text.substring(lineStart, lineEnd));
-	}
-
-	private static int parseLine(StringBuilder buf, int index) {
-		while (index < buf.length() && buf.charAt(index) != '\n') {
-			index++;
-		}
-		return index + 1;
 	}
 
 	private static class EnclosingLine {

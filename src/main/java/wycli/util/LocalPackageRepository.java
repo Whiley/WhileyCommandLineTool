@@ -15,21 +15,17 @@ package wycli.util;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-import wybs.util.AbstractCompilationUnit.Value;
-import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
 import wycli.lang.Package;
-import wycli.lang.SemanticVersion;
-import wyfs.lang.Content;
-import wyfs.lang.Path;
-import wyfs.lang.Path.Root;
-import wyfs.util.DirectoryRoot;
-import wyfs.util.Trie;
-import wyfs.util.ZipFile;
-import wyfs.util.ZipFileRoot;
+import wycli.lang.Semantic;
+import wycc.lang.Content;
+import wycc.lang.Filter;
+import wycc.lang.Path;
+import wycc.util.ZipFile;
 
 /**
  *
@@ -37,8 +33,7 @@ import wyfs.util.ZipFileRoot;
  *
  */
 public class LocalPackageRepository implements Package.Repository {
-
-	public static final Trie REPOSITORY_DIR = Trie.fromString("repository/dir");
+	public static final Path REPOSITORY_DIR = Path.fromStrings("repository", "dir");
 
 	/**
 	 * Schema for global configuration (i.e. which applies to all projects for a given user).
@@ -48,25 +43,18 @@ public class LocalPackageRepository implements Package.Repository {
 
 	protected final Command.Environment environment;
 	protected final Package.Repository parent;
-	protected final Content.Registry registry;
-	protected final Path.Root root;
+	protected final Content.Root root;
 
-	public LocalPackageRepository(Command.Environment environment, Content.Registry registry, Path.Root root) throws IOException {
-		this(environment,null,registry,root);
+	public LocalPackageRepository(Command.Environment environment, Content.Root root) throws IOException {
+		this(environment,null,root);
 	}
 
-	public LocalPackageRepository(Command.Environment environment, Package.Repository parent, Content.Registry registry, Path.Root root) throws IOException {
+	public LocalPackageRepository(Command.Environment environment, Package.Repository parent,
+			Content.Root root)
+			throws IOException {
 		this.parent = parent;
-		this.registry = registry;
 		this.environment = environment;
-		// Check whether URL configuration given
-		if(environment.hasKey(REPOSITORY_DIR)) {
-			// Yes, therefore override default location
-			String dir = environment.get(Value.UTF8.class, REPOSITORY_DIR).toString();
-			this.root = new DirectoryRoot(dir, registry);
-		} else {
-			this.root = root;
-		}
+		this.root = root;
 	}
 
 	@Override
@@ -75,15 +63,15 @@ public class LocalPackageRepository implements Package.Repository {
 	}
 
 	@Override
-	public Set<SemanticVersion> list(String pkg) throws IOException {
-		Set<Path.ID> matches = root.match(Content.filter("*", ZipFile.ContentType));
-		HashSet<SemanticVersion> versions = new HashSet<>();
+	public Set<Semantic.Version> list(String pkg) throws IOException {
+		List<Path> matches = root.match(ZipFile.ContentType, Filter.EVERYTHING);
+		HashSet<Semantic.Version> versions = new HashSet<>();
 		String prefix = pkg + "-v";
-		for(Path.ID m : matches) {
+		for(Path m : matches) {
 			// FIXME: need for m.last() seems like bug
 			String str = m.last().toString();
 			if(str.startsWith(prefix)) {
-				SemanticVersion v = new SemanticVersion(str.substring(prefix.length()));
+				Semantic.Version v = new Semantic.Version(str.substring(prefix.length()));
 				versions.add(v);
 			}
 		}
@@ -91,32 +79,29 @@ public class LocalPackageRepository implements Package.Repository {
 	}
 
 	@Override
-	public Path.Root get(String pkg, SemanticVersion version) throws IOException {
-		Trie id = Trie.fromString(pkg + "-v" + version);
+	public ZipFile get(String pkg, Semantic.Version version) throws IOException {
+		Path id = Path.fromString(pkg + "-v" + version);
+		ZipFile zf = root.get(ZipFile.ContentType, id);
 		// Attempt to resolve it.
-		if (!root.exists(id, ZipFile.ContentType)) {
+		if (zf == null) {
 			environment.getLogger().logTimedMessage("Failed loading  " + pkg + "-v" + version, 0, 0);
 			return null;
 		} else {
 			// Extract entry for ZipFile
-			Path.Entry<ZipFile> zipfile = root.get(id, ZipFile.ContentType);
-			// Construct root representing this ZipFile
-			return new ZipFileRoot(zipfile, registry);
+			return zf;
 		}
 	}
 
 	@Override
-	public void put(ZipFile pkg, String name, SemanticVersion version) throws IOException {
+	public void put(ZipFile pkg, String name, Semantic.Version version) throws IOException {
 		// Determine fully qualified package name
-		Trie qpn = Trie.fromString(name + "-v" + version);
+		Path qpn = Path.fromString(name + "-v" + version);
 		// Dig out the file!
-		Path.Entry<ZipFile> entry = root.create(qpn, ZipFile.ContentType);
-		// Write the contents
-		entry.write(pkg);
-		// Flush
-		entry.flush();
+		root.put(qpn, pkg);
 		//
-		environment.getLogger().logTimedMessage("Installed " + entry.location(), 0, 0);
+		root.flush();
+		//
+		environment.getLogger().logTimedMessage("Installed " + qpn, 0, 0);
 	}
 
 }

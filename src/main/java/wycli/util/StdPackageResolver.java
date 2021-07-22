@@ -19,17 +19,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import wybs.lang.Build;
-import wybs.util.AbstractCompilationUnit.Value.UTF8;
+import wycc.lang.Build;
+import wycc.util.AbstractCompilationUnit.Value.UTF8;
+import wycc.lang.Content;
+import wycc.lang.Filter;
+import wycli.Schemas;
 import wycli.cfg.ConfigFile;
 import wycli.cfg.Configuration;
 import wycli.lang.Command;
 import wycli.lang.Package;
-import wycli.lang.SemanticVersion;
+import wycli.lang.Semantic.Version;
 import wycli.lang.Package.Repository;
-import wyfs.lang.Path;
-import wyfs.util.Pair;
-import wyfs.util.Trie;
+import wycli.lang.Semantic;
+import wycc.lang.Path;
+import wycc.util.Pair;
+import wycc.util.ZipFile;
 
 /**
  * Provides a default and relatively simplistic approach for resolving packages.
@@ -47,17 +51,17 @@ public class StdPackageResolver implements Package.Resolver {
 	}
 
 	@Override
-	public List<Path.Root> resolve(Configuration cf) throws IOException {
-		ArrayList<Path.Root> packages = new ArrayList<>();
+	public List<Content.Source> resolve(Configuration cf) throws IOException {
+		ArrayList<Content.Source> packages = new ArrayList<>();
 		// Extract all dependencies from target config file
-		List<Pair<String,String>> dependencies = extractDependencies(cf);
+		List<Pair<String, String>> dependencies = extractDependencies(cf);
 		// Visited set stores all packages we have visited. This is used to ensure no
 		// package is visited more than once.
-		HashSet<Pair<String,String>> visited = new HashSet<>(dependencies);
+		HashSet<Pair<String, String>> visited = new HashSet<>(dependencies);
 		// Iterate until no more dependencies to resolve
-		while(dependencies.size() > 0) {
+		while (dependencies.size() > 0) {
 			// Iterate current batch of dependencies
-			dependencies = process(packages,dependencies,visited);
+			dependencies = process(packages, dependencies, visited);
 		}
 		return packages;
 	}
@@ -67,27 +71,28 @@ public class StdPackageResolver implements Package.Resolver {
 		return repository;
 	}
 
-	private List<Pair<String, String>> process(List<Path.Root> packages, List<Pair<String, String>> batch, Set<Pair<String, String>> visited) throws IOException {
+	private List<Pair<String, String>> process(List<Content.Source> packages,
+			List<Pair<String, String>> batch, Set<Pair<String, String>> visited) throws IOException {
 		// Children will store all dependencies of those in batch
-		ArrayList<Pair<String,String>> children = new ArrayList<>();
+		ArrayList<Pair<String, String>> children = new ArrayList<>();
 		// Process current batch of dependencies
 		for (Pair<String, String> dep : batch) {
 			String name = dep.first();
-			SemanticVersion version = resolveLatestCompatible(name,new SemanticVersion(dep.second()));
-			Path.Root pkg = repository.get(name, version);
+			Semantic.Version version = resolveLatestCompatible(name, new Semantic.Version(dep.second()));
+			ZipFile pkg = repository.get(name, version);
 			if (pkg != null) {
 				// Read package configuration file.
-				Path.Entry<ConfigFile> entry = pkg.get(Trie.fromString("wy"), ConfigFile.ContentType);
-				if (entry == null) {
+				ConfigFile cfile = pkg.get(ConfigFile.ContentType, Path.fromString("wy"));
+				if (cfile == null) {
 					// Something is wrong
 					environment.getLogger()
 							.logTimedMessage("Corrupt package " + pkg + "-v" + version + " (missing wy.toml)", 0, 0);
 				} else {
 					// Convert file into configuration
-					Configuration cf = entry.read().toConfiguration(Package.SCHEMA, false);
+					Configuration cf = cfile.toConfiguration(Schemas.PACKAGE, false);
 					// Add all (non-visited) child dependencies
-					for(Pair<String, String> d : extractDependencies(cf)) {
-						if(!visited.contains(d)) {
+					for (Pair<String, String> d : extractDependencies(cf)) {
+						if (!visited.contains(d)) {
 							visited.add(d);
 							children.add(d);
 						}
@@ -113,13 +118,13 @@ public class StdPackageResolver implements Package.Resolver {
 	 * @return
 	 * @throws IOException
 	 */
-	private SemanticVersion resolveLatestCompatible(String pkg, SemanticVersion version) throws IOException {
+	private Semantic.Version resolveLatestCompatible(String pkg, Semantic.Version version) throws IOException {
 		// list all possible versions of the given package
-		Set<SemanticVersion> versions = repository.list(pkg);
+		Set<Semantic.Version> versions = repository.list(pkg);
 		//
-		SemanticVersion latest = version;
+		Semantic.Version latest = version;
 		//
-		for (SemanticVersion v : versions) {
+		for (Semantic.Version v : versions) {
 			if (v.getMajor() == version.getMajor() && v.compareTo(latest) > 0) {
 				latest = v;
 			}
@@ -130,11 +135,11 @@ public class StdPackageResolver implements Package.Resolver {
 
 	private List<Pair<String, String>> extractDependencies(Configuration cf) {
 		//
-		List<Path.ID> deps = cf.matchAll(Trie.fromString("dependencies/**"));
+		List<Path> deps = cf.matchAll(Filter.fromString("dependencies/**"));
 		// Determine dependency roots
 		List<Pair<String, String>> pairs = new ArrayList<>();
 		for (int i = 0; i != deps.size(); ++i) {
-			Path.ID dep = deps.get(i);
+			Path dep = deps.get(i);
 			// Get dependency name
 			String name = dep.get(1);
 			// Get version string
