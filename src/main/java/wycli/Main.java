@@ -33,6 +33,7 @@ import wycli.lang.Command;
 import wycli.lang.Package;
 import wycli.lang.Plugin;
 import wycli.util.LocalPackageRepository;
+import wycli.util.RemotePackageRepository;
 import wycli.util.StdPackageResolver;
 import wycli.util.CommandParser;
 import wycc.util.Pair;
@@ -88,7 +89,7 @@ public class Main implements Command.Environment {
 		this.repository = new ByteRepository(env, entries);
 		this.localSchema = constructSchema();
 		// Setup package resolver
-		this.resolver = new StdPackageResolver(this, new LocalPackageRepository(this, packageRepository));
+		this.resolver = new StdPackageResolver(this, new RemotePackageRepository(this, packageRepository));
 	}
 
 	@Override

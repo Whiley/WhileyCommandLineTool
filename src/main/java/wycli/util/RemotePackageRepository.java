@@ -69,11 +69,11 @@ public class RemotePackageRepository extends LocalPackageRepository {
 	 */
 	private Map<String,Set<Semantic.Version>> index = null;
 
-	public RemotePackageRepository(Command.Environment environment,Content.Registry registry, Content.Root root) throws IOException {
-		this(environment,null,registry,root);
+	public RemotePackageRepository(Command.Environment environment, Content.Root root) throws IOException {
+		this(environment, null, root);
 	}
 
-	public RemotePackageRepository(Command.Environment environment, Package.Repository parent, Content.Registry registry, Content.Root root) throws IOException {
+	public RemotePackageRepository(Command.Environment environment, Package.Repository parent, Content.Root root) throws IOException {
 		super(environment, parent, root);
 //		// Check whether URL configuration given
 //		if(environment.hasKey(REPOSITORY_URL)) {
